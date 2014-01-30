@@ -18,8 +18,11 @@ package org.geowebcache.service.wms;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
+import java.awt.image.IndexColorModel;
+import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,12 +31,19 @@ import java.util.List;
 import java.util.Map;
 
 import javax.imageio.ImageIO;
+import javax.media.jai.PlanarImage;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.geotools.image.ImageWorker;
+import org.geotools.image.palette.ColorIndexer;
+import org.geotools.image.palette.ColorIndexerDescriptor;
+import org.geotools.image.palette.Quantizer;
+import org.geotools.resources.image.ImageUtilities;
 import org.geowebcache.GeoWebCacheException;
 import org.geowebcache.conveyor.Conveyor.CacheResult;
 import org.geowebcache.conveyor.ConveyorTile;
@@ -362,13 +372,13 @@ public class WMSTileFuser {
                 long[] gridLoc = { gridx, gridy, srcIdx };
 
                 ConveyorTile tile = new ConveyorTile(sb, layer.getName(), gridSubset.getName(),
-                        gridLoc, ImageMime.png, fullParameters, null, null);
+                        gridLoc, outputFormat, fullParameters, null, null);
 
                 // Check whether this tile is to be rendered at all
                 try {
                     layer.applyRequestFilters(tile);
                 } catch (RequestFilterException e) {
-                    log.debug(e.getMessage());
+                    log.debug(e.getMessage(),e);
                     continue;
                 }
 
@@ -433,6 +443,8 @@ public class WMSTileFuser {
             canvas = new BufferedImage(reqWidth, reqHeight, preTransform.getType());
 
             Graphics2D gfx = canvas.createGraphics();
+            // hints
+            
             AffineTransform affineTrans = AffineTransform.getScaleInstance(((double) reqWidth)
                     / preTransform.getWidth(), ((double) reqHeight) / preTransform.getHeight());
 
@@ -451,23 +463,55 @@ public class WMSTileFuser {
         createCanvas();
         renderCanvas();
         scaleRaster();
+        
+        AccountingOutputStream aos=null;
+        RenderedImage finalImage =null;
+        try{
+          finalImage = applyPalette();
 
-        response.setStatus(HttpServletResponse.SC_OK);
-        response.setContentType(this.outputFormat.getMimeType());
-        response.setCharacterEncoding("UTF-8");
+          response.setStatus(HttpServletResponse.SC_OK);
+          response.setContentType(this.outputFormat.getMimeType());
+          response.setCharacterEncoding("UTF-8");
 
-        ServletOutputStream os = response.getOutputStream();
-        AccountingOutputStream aos = new AccountingOutputStream(os);
-
-        try {
-            ImageIO.write(canvas, outputFormat.getInternalName(), aos);
-            aos.close();
-        } catch (IOException ioe) {
-            log.debug("IOException writing untiled response to client: " + ioe.getMessage());
-        }
-
-        log.debug("WMS response size: " + aos.getCount() + "bytes.");
-
-        stats.log(aos.getCount(), CacheResult.WMS);
+          ServletOutputStream os = response.getOutputStream();
+          aos = new AccountingOutputStream(os);
+          ImageIO.write(finalImage, outputFormat.getInternalName(), aos);
+          
+          log.debug("WMS response size: " + aos.getCount() + "bytes.");
+          stats.log(aos.getCount(), CacheResult.WMS);
+        } catch (Exception e) {
+        	log.debug("IOException writing untiled response to client: " + e.getMessage(),e);
+        	
+        	// closing the stream
+        	if(aos!=null){
+        		IOUtils.closeQuietly(aos);
+        	}
+        	
+        	// releasing Image
+        	if(finalImage!=null){
+        		ImageUtilities.disposePlanarImageChain(PlanarImage.wrapRenderedImage(finalImage));
+        	}
+        }        
     }
+
+	private RenderedImage applyPalette() {
+		if(outputFormat.getMimeType().equals(ImageMime.png8.getMimeType())) {
+			if (!(canvas.getColorModel() instanceof IndexColorModel)) {
+                // try to force a RGBA setup
+				ImageWorker imageWorker = new ImageWorker(canvas);
+				RenderedImage image = imageWorker.rescaleToBytes().forceComponentColorModel()
+                        .getRenderedImage();
+                ColorIndexer indexer =  new Quantizer(256).subsample().buildColorIndexer(image);
+                
+
+                // if we have an indexer transform the image
+                if (indexer != null) {
+                    image = ColorIndexerDescriptor.create(image, indexer, null);
+                }
+                return image;
+            }
+		}
+		return canvas;
+		
+	}
 }
