@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<util:properties id="propSource" location="classpath:/src/main/resources/property.properties" />
+
 <beans>
   <description>
    Bean configuration file for the gwc-wmts module
@@ -12,6 +15,5 @@
 	<constructor-arg ref="gwcRuntimeStats"/>
     <constructor-arg ref="gwcURLMangler"/>
     <constructor-arg ref="geowebcacheDispatcher"/>
-  </bean>
-	
+  </bean>  
 </beans>

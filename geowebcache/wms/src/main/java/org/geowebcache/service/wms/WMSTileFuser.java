@@ -16,6 +16,9 @@
  */
 package org.geowebcache.service.wms;
 
+import it.geosolutions.imageio.stream.input.ImageInputStreamAdapter;
+import it.geosolutions.imageio.stream.input.spi.FileImageInputStreamExtImplSpi;
+
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -23,7 +26,10 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.image.RenderedImage;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -31,6 +37,10 @@ import java.util.List;
 import java.util.Map;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
+import javax.imageio.ImageWriter;
+import javax.imageio.spi.ImageReaderSpi;
 import javax.media.jai.PlanarImage;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -43,6 +53,7 @@ import org.geotools.image.ImageWorker;
 import org.geotools.image.palette.ColorIndexer;
 import org.geotools.image.palette.ColorIndexerDescriptor;
 import org.geotools.image.palette.Quantizer;
+import org.geotools.map.WMSMapLayer;
 import org.geotools.resources.image.ImageUtilities;
 import org.geowebcache.GeoWebCacheException;
 import org.geowebcache.conveyor.Conveyor.CacheResult;
@@ -52,6 +63,8 @@ import org.geowebcache.grid.BoundingBox;
 import org.geowebcache.grid.GridSubset;
 import org.geowebcache.grid.OutsideCoverageException;
 import org.geowebcache.grid.SRS;
+import org.geowebcache.inputoutput.ImageDecoderContainer;
+import org.geowebcache.inputoutput.ImageEncoderContainer;
 import org.geowebcache.layer.TileLayer;
 import org.geowebcache.layer.TileLayerDispatcher;
 import org.geowebcache.layer.wms.WMSLayer;
@@ -61,6 +74,13 @@ import org.geowebcache.stats.RuntimeStats;
 import org.geowebcache.storage.StorageBroker;
 import org.geowebcache.util.AccountingOutputStream;
 import org.geowebcache.util.ServletUtils;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+
+
+import com.sun.media.imageioimpl.common.PackageUtil;
+import com.sun.media.jai.operator.ImageReadDescriptor;
 
 /*
  * It will work as follows
@@ -69,7 +89,7 @@ import org.geowebcache.util.ServletUtils;
  * 4) GWC will scale the raster down to the requested dimensions.
  * 5) GWC will then compress the raster to the desired output format and return the image. The image is not cached. 
  */
-public class WMSTileFuser {
+public class WMSTileFuser implements ApplicationContextAware{
     private static Log log = LogFactory.getLog(WMSTileFuser.class);
 
     final StorageBroker sb;
@@ -139,6 +159,10 @@ public class WMSTileFuser {
 
     private Map<String, String> fullParameters;
 
+    private ImageDecoderContainer decoderMap;
+
+    private ImageEncoderContainer encoderMap;
+
     protected WMSTileFuser(TileLayerDispatcher tld, StorageBroker sb, HttpServletRequest servReq)
             throws GeoWebCacheException {
         this.sb = sb;
@@ -158,11 +182,13 @@ public class WMSTileFuser {
         Iterator<MimeType> iter = ml.iterator();
         while (iter.hasNext()) {
             MimeType mt = iter.next();
+            this.srcFormat = (ImageMime)mt;
             if (mt.getInternalName().equalsIgnoreCase("png")) {
                 this.srcFormat = (ImageMime) mt;
+                break;
             }
         }
-
+        
         gridSubset = layer.getGridSubsetForSRS(SRS.getSRS(values.get("srs")));
 
         outputFormat = (ImageMime) ImageMime.createFromFormat(values.get("format"));
@@ -195,6 +221,17 @@ public class WMSTileFuser {
         this.reqWidth = width;
         this.reqHeight = height;
         this.fullParameters = Collections.emptyMap();
+        
+        List<MimeType> ml = layer.getMimeTypes();
+        Iterator<MimeType> iter = ml.iterator();
+        while (iter.hasNext()) {
+            MimeType mt = iter.next();
+            this.srcFormat = (ImageMime)mt;
+            if (mt.getInternalName().equalsIgnoreCase("png")) {
+                this.srcFormat = (ImageMime) mt;
+                break;
+            }
+        }
     }
 
     protected void determineSourceResolution() {
@@ -330,7 +367,8 @@ public class WMSTileFuser {
     }
 
     protected void renderCanvas() throws OutsideCoverageException, GeoWebCacheException,
-            IOException {
+            IOException {        
+        
         // Now we loop over all the relevant tiles and write them to the canvas,
         // Starting at the bottom, moving to the right and up
         
@@ -383,8 +421,10 @@ public class WMSTileFuser {
                 }
 
                 layer.getTile(tile);
-
-                BufferedImage tileImg = ImageIO.read(tile.getBlob().getInputStream());
+                // Selection of the resource input stream
+                InputStream stream = tile.getBlob().getInputStream();
+                
+                BufferedImage tileImg = ImageIO.read(stream);
 
                 int tilex = 0;
                 int canvasx = (int) (gridx - startx) * gridSubset.getTileWidth();
@@ -443,14 +483,14 @@ public class WMSTileFuser {
             canvas = new BufferedImage(reqWidth, reqHeight, preTransform.getType());
 
             Graphics2D gfx = canvas.createGraphics();
-            // hints
-            
+            // TODO ADD hints
             AffineTransform affineTrans = AffineTransform.getScaleInstance(((double) reqWidth)
                     / preTransform.getWidth(), ((double) reqHeight) / preTransform.getHeight());
 
             log.debug("AffineTransform: " + (((double) reqWidth) / preTransform.getWidth()) + ","
                     + +(((double) reqHeight) / preTransform.getHeight()));
 
+            //gfx.addRenderingHints(hints)
             gfx.drawRenderedImage(preTransform, affineTrans);
             gfx.dispose();
         }
@@ -462,7 +502,7 @@ public class WMSTileFuser {
         determineCanvasLayout();
         createCanvas();
         renderCanvas();
-        scaleRaster();
+        scaleRaster();       
         
         AccountingOutputStream aos=null;
         RenderedImage finalImage =null;
@@ -474,7 +514,8 @@ public class WMSTileFuser {
           response.setCharacterEncoding("UTF-8");
 
           ServletOutputStream os = response.getOutputStream();
-          aos = new AccountingOutputStream(os);
+          aos = new AccountingOutputStream(os);         
+          
           ImageIO.write(finalImage, outputFormat.getInternalName(), aos);
           
           log.debug("WMS response size: " + aos.getCount() + "bytes.");
@@ -514,4 +555,11 @@ public class WMSTileFuser {
 		return canvas;
 		
 	}
+
+    public void setApplicationContext(ApplicationContext context) throws BeansException {
+        
+        decoderMap = context.getBean(ImageDecoderContainer.class);
+        encoderMap = context.getBean(ImageEncoderContainer.class);
+        
+    }
 }
