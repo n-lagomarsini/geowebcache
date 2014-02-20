@@ -45,6 +45,7 @@ import org.geowebcache.storage.StorageBroker;
 import org.geowebcache.storage.StorageException;
 import org.geowebcache.storage.TileObject;
 import org.geowebcache.storage.blobstore.file.FileBlobStore;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import com.mockrunner.mock.web.MockHttpServletRequest;
 import com.mockrunner.mock.web.MockHttpServletResponse;
@@ -171,7 +172,10 @@ public class WMSTileFuserTest extends TestCase {
 	        );
 	        
 	        WMSTileFuser tileFuser = new WMSTileFuser(dispatcher, broker, request);
-	        		
+	        	
+	        // Selection of the ApplicationContext associated
+	        ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("src/test/resources/appContextTest.xml");
+	        tileFuser.setApplicationContext(context);
 	        MockHttpServletResponse response = new MockHttpServletResponse();
 	        
 			tileFuser.writeResponse(response, new RuntimeStats(1, Arrays.asList(1), Arrays.asList("desc")));

@@ -1,4 +1,4 @@
-package org.geowebcache.inputoutput;
+package org.geowebcache.io;
 
 import java.awt.image.RenderedImage;
 import java.io.IOException;
@@ -31,5 +31,9 @@ public class ImageEncoderContainer {
     public void encode(RenderedImage image, String mimeType, Object destination,
             boolean aggressiveOutputStreamOptimization, Map<String,Object> map) throws IOException {
         mapEncoders.get(mimeType).encode(image, destination, aggressiveOutputStreamOptimization, map);
+    }
+       
+    public boolean isAggressiveOutputStreamSupported(String mimeType){
+        return mapEncoders.get(mimeType).isAgressiveOutputStreamSupported();
     }
 }

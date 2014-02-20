@@ -16,31 +16,20 @@
  */
 package org.geowebcache.service.wms;
 
-import it.geosolutions.imageio.stream.input.ImageInputStreamAdapter;
-import it.geosolutions.imageio.stream.input.spi.FileImageInputStreamExtImplSpi;
-
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.image.RenderedImage;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Reader;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReadParam;
-import javax.imageio.ImageReader;
-import javax.imageio.ImageWriter;
-import javax.imageio.spi.ImageReaderSpi;
 import javax.media.jai.PlanarImage;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -53,7 +42,6 @@ import org.geotools.image.ImageWorker;
 import org.geotools.image.palette.ColorIndexer;
 import org.geotools.image.palette.ColorIndexerDescriptor;
 import org.geotools.image.palette.Quantizer;
-import org.geotools.map.WMSMapLayer;
 import org.geotools.resources.image.ImageUtilities;
 import org.geowebcache.GeoWebCacheException;
 import org.geowebcache.conveyor.Conveyor.CacheResult;
@@ -63,8 +51,8 @@ import org.geowebcache.grid.BoundingBox;
 import org.geowebcache.grid.GridSubset;
 import org.geowebcache.grid.OutsideCoverageException;
 import org.geowebcache.grid.SRS;
-import org.geowebcache.inputoutput.ImageDecoderContainer;
-import org.geowebcache.inputoutput.ImageEncoderContainer;
+import org.geowebcache.io.ImageDecoderContainer;
+import org.geowebcache.io.ImageEncoderContainer;
 import org.geowebcache.layer.TileLayer;
 import org.geowebcache.layer.TileLayerDispatcher;
 import org.geowebcache.layer.wms.WMSLayer;
@@ -75,12 +63,10 @@ import org.geowebcache.storage.StorageBroker;
 import org.geowebcache.util.AccountingOutputStream;
 import org.geowebcache.util.ServletUtils;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-
-
-import com.sun.media.imageioimpl.common.PackageUtil;
-import com.sun.media.jai.operator.ImageReadDescriptor;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /*
  * It will work as follows
@@ -91,7 +77,9 @@ import com.sun.media.jai.operator.ImageReadDescriptor;
  */
 public class WMSTileFuser implements ApplicationContextAware{
     private static Log log = LogFactory.getLog(WMSTileFuser.class);
-
+    
+    private ApplicationContext applicationContext;
+    
     final StorageBroker sb;
 
     final GridSubset gridSubset;
@@ -159,8 +147,10 @@ public class WMSTileFuser implements ApplicationContextAware{
 
     private Map<String, String> fullParameters;
 
+    
     private ImageDecoderContainer decoderMap;
-
+    
+    
     private ImageEncoderContainer encoderMap;
 
     protected WMSTileFuser(TileLayerDispatcher tld, StorageBroker sb, HttpServletRequest servReq)
@@ -424,7 +414,10 @@ public class WMSTileFuser implements ApplicationContextAware{
                 // Selection of the resource input stream
                 InputStream stream = tile.getBlob().getInputStream();
                 
-                BufferedImage tileImg = ImageIO.read(stream);
+                String formatName = srcFormat.getInternalName();
+                BufferedImage tileImg = decoderMap.decode(formatName, stream, true, null);
+                
+                //BufferedImage tileImg = ImageIO.read(stream);
 
                 int tilex = 0;
                 int canvasx = (int) (gridx - startx) * gridSubset.getTileWidth();
@@ -484,6 +477,7 @@ public class WMSTileFuser implements ApplicationContextAware{
 
             Graphics2D gfx = canvas.createGraphics();
             // TODO ADD hints
+            //gfx.addRenderingHints(null);
             AffineTransform affineTrans = AffineTransform.getScaleInstance(((double) reqWidth)
                     / preTransform.getWidth(), ((double) reqHeight) / preTransform.getHeight());
 
@@ -516,7 +510,11 @@ public class WMSTileFuser implements ApplicationContextAware{
           ServletOutputStream os = response.getOutputStream();
           aos = new AccountingOutputStream(os);         
           
-          ImageIO.write(finalImage, outputFormat.getInternalName(), aos);
+          //ImageIO.write(finalImage, outputFormat.getInternalName(), aos);
+          
+          String format = outputFormat.getInternalName();
+          encoderMap.encode(finalImage, format, aos, encoderMap.isAggressiveOutputStreamSupported(format)
+                , null);
           
           log.debug("WMS response size: " + aos.getCount() + "bytes.");
           stats.log(aos.getCount(), CacheResult.WMS);
@@ -555,11 +553,10 @@ public class WMSTileFuser implements ApplicationContextAware{
 		return canvas;
 		
 	}
-
+	
     public void setApplicationContext(ApplicationContext context) throws BeansException {
-        
-        decoderMap = context.getBean(ImageDecoderContainer.class);
-        encoderMap = context.getBean(ImageEncoderContainer.class);
-        
+        applicationContext = context; 
+        decoderMap = applicationContext.getBean(ImageDecoderContainer.class);
+        encoderMap = applicationContext.getBean(ImageEncoderContainer.class);        
     }
 }

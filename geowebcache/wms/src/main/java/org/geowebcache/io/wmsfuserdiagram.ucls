@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <class-diagram version="1.1.4" icons="true" always-add-relationships="false" generalizations="true" realizations="true" 
   associations="true" dependencies="false" nesting-relationships="true">  
-  <class id="1" language="java" name="org.geowebcache.inputoutput.PNGImageEncoder" project="gwc-wms" 
-    file="/gwc-wms/src/main/java/org/geowebcache/inputoutput/PNGImageEncoder.java" binary="false" corner="BOTTOM_RIGHT">    
+  <class id="1" language="java" name="org.geowebcache.io.PNGImageEncoder" project="gwc-wms" 
+    file="/gwc-wms/src/main/java/org/geowebcache/io/PNGImageEncoder.java" binary="false" corner="BOTTOM_RIGHT">    
     <position height="-1" width="-1" x="624" y="443"/>    
     <display autosize="true" stereotype="true" package="true" initial-value="false" signature="true" accessors="true" 
       visibility="true">      
@@ -10,9 +10,8 @@
       <operations public="false" package="false" protected="false" private="false" static="true"/>    
     </display>  
   </class>  
-  <class id="2" language="java" name="org.geowebcache.inputoutput.ImageEncoderContainer" project="gwc-wms" 
-    file="/gwc-wms/src/main/java/org/geowebcache/inputoutput/ImageEncoderContainer.java" binary="false" 
-    corner="BOTTOM_RIGHT">    
+  <class id="2" language="java" name="org.geowebcache.io.ImageEncoderContainer" project="gwc-wms" 
+    file="/gwc-wms/src/main/java/org/geowebcache/io/ImageEncoderContainer.java" binary="false" corner="BOTTOM_RIGHT">    
     <position height="-1" width="-1" x="624" y="165"/>    
     <display autosize="true" stereotype="true" package="true" initial-value="false" signature="true" accessors="true" 
       visibility="true">      
@@ -20,8 +19,8 @@
       <operations public="false" package="false" protected="false" private="false" static="true"/>    
     </display>  
   </class>  
-  <class id="3" language="java" name="org.geowebcache.inputoutput.ImageEncoder" project="gwc-wms" 
-    file="/gwc-wms/src/main/java/org/geowebcache/inputoutput/ImageEncoder.java" binary="false" corner="BOTTOM_RIGHT">    
+  <class id="3" language="java" name="org.geowebcache.io.ImageEncoder" project="gwc-wms" 
+    file="/gwc-wms/src/main/java/org/geowebcache/io/ImageEncoder.java" binary="false" corner="BOTTOM_RIGHT">    
     <position height="-1" width="-1" x="623" y="297"/>    
     <display autosize="true" stereotype="true" package="true" initial-value="false" signature="true" accessors="true" 
       visibility="true">      
@@ -29,8 +28,8 @@
       <operations public="false" package="false" protected="false" private="false" static="true"/>    
     </display>  
   </class>  
-  <class id="4" language="java" name="org.geowebcache.inputoutput.ImageDecoder" project="gwc-wms" 
-    file="/gwc-wms/src/main/java/org/geowebcache/inputoutput/ImageDecoder.java" binary="false" corner="BOTTOM_RIGHT">    
+  <class id="4" language="java" name="org.geowebcache.io.ImageDecoder" project="gwc-wms" 
+    file="/gwc-wms/src/main/java/org/geowebcache/io/ImageDecoder.java" binary="false" corner="BOTTOM_RIGHT">    
     <position height="-1" width="-1" x="154" y="305"/>    
     <display autosize="true" stereotype="true" package="true" initial-value="false" signature="true" accessors="true" 
       visibility="true">      
@@ -38,9 +37,8 @@
       <operations public="false" package="false" protected="false" private="false" static="true"/>    
     </display>  
   </class>  
-  <class id="5" language="java" name="org.geowebcache.inputoutput.ImageDecoderContainer" project="gwc-wms" 
-    file="/gwc-wms/src/main/java/org/geowebcache/inputoutput/ImageDecoderContainer.java" binary="false" 
-    corner="BOTTOM_RIGHT">    
+  <class id="5" language="java" name="org.geowebcache.io.ImageDecoderContainer" project="gwc-wms" 
+    file="/gwc-wms/src/main/java/org/geowebcache/io/ImageDecoderContainer.java" binary="false" corner="BOTTOM_RIGHT">    
     <position height="-1" width="-1" x="155" y="167"/>    
     <display autosize="true" stereotype="true" package="true" initial-value="false" signature="true" accessors="true" 
       visibility="true">      

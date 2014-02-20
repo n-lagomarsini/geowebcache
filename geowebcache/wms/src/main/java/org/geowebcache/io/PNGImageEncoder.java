@@ -1,6 +1,6 @@
-package org.geowebcache.inputoutput;
+package org.geowebcache.io;
 
-import it.geosolutions.imageio.plugins.png.PNGJWriter;
+import it.geosolutions.imageio.plugins.png.PNGWriter;
 import it.geosolutions.imageio.stream.output.ImageOutputStreamAdapter;
 
 import java.awt.image.RenderedImage;
@@ -28,7 +28,6 @@ public class PNGImageEncoder extends ImageEncoder {
 
     private static List<String> supportedMimeTypes;
 
-    @Value("#{propSource[disablePNG]}")
     private boolean disablePNG;
 
     private final boolean isAggressiveSupported;
@@ -77,7 +76,7 @@ public class PNGImageEncoder extends ImageEncoder {
            super.encode(image, destination, aggressiveOutputStreamOptimization,map); 
         }else{
             // Creation of the associated Writer
-            PNGJWriter writer = new PNGJWriter();
+            PNGWriter writer = new PNGWriter();
             OutputStream stream = null;
             try {
                 //writer = new PNGJWriter();
@@ -120,4 +119,13 @@ public class PNGImageEncoder extends ImageEncoder {
             }
         }        
     }   
+    
+    public boolean isDisablePNG() {
+        return disablePNG;
+    }
+
+    public void setDisablePNG(boolean disablePNG) {
+        this.disablePNG = disablePNG;
+    }
+    
 }

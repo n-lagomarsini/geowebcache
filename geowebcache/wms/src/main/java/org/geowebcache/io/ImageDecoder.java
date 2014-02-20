@@ -1,4 +1,4 @@
-package org.geowebcache.inputoutput;
+package org.geowebcache.io;
 
 import it.geosolutions.imageio.stream.input.ImageInputStreamAdapter;
 
