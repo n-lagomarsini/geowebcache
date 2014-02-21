@@ -20,7 +20,6 @@ package org.geowebcache.service.wms;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Hashtable;
@@ -174,13 +173,14 @@ public class WMSTileFuserTest extends TestCase {
 	        WMSTileFuser tileFuser = new WMSTileFuser(dispatcher, broker, request);
 	        	
 	        // Selection of the ApplicationContext associated
-	        ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("src/test/resources/appContextTest.xml");
+	        ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("appContextTest.xml");
 	        tileFuser.setApplicationContext(context);
 	        MockHttpServletResponse response = new MockHttpServletResponse();
-	        
-			tileFuser.writeResponse(response, new RuntimeStats(1, Arrays.asList(1), Arrays.asList("desc")));
-			
-			assertTrue(response.getOutputStreamContent().length() > 0);
+
+            tileFuser.writeResponse(response,
+                    new RuntimeStats(1, Arrays.asList(1), Arrays.asList("desc")));
+
+            assertTrue(response.getOutputStreamContent().length() > 0);
         } finally {
         	temp.delete();
         }

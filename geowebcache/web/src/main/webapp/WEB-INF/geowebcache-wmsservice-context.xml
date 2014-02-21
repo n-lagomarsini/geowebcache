@@ -2,6 +2,7 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 
 <beans>
+
 	<description>
 		Bean configuration file for the gwc-wms module
 	</description>
@@ -23,10 +24,6 @@
 		</property>
 	</bean>
 
-	<bean id="decoderContainer" class="org.geowebcache.io.ImageDecoderContainer" />
-
-	<bean id="encoderContainer" class="org.geowebcache.io.ImageEncoderContainer" />
-
 	<!--Encoders -->
 
 	<bean id="PNGEncoder" class="org.geowebcache.io.PNGImageEncoder">
@@ -34,8 +31,8 @@
 		<constructor-arg index="1" value="1" />
 		<constructor-arg index="2">
 			<list>
-				<value>"com.sun.media.imageioimpl.plugins.png.CLibPNGImageWriterSpi"</value>
-				<value>"com.sun.imageio.plugins.png.PNGImageWriterSpi"</value>
+				<value>com.sun.media.imageioimpl.plugins.png.CLibPNGImageWriterSpi</value>
+				<value>com.sun.imageio.plugins.png.PNGImageWriterSpi</value>
 			</list>
 		</constructor-arg>
 		<property name="disablePNG">
@@ -43,145 +40,146 @@
 		</property>
 	</bean>
 
-	<bean id="GIFEncoder" class="org.geowebcache.io.ImageEncoder">
-		<constructor-arg index="0" value="true" />
-		<constructor-arg index="1">
+	<bean id="GIFEncoder" class="org.geowebcache.io.ImageEncoderImpl">
+		<constructor-arg type="boolean" value="true" />
+		<constructor-arg>
 			<list>
-				<value>"gif"</value>
+				<value>image/gif</value>
 			</list>
 		</constructor-arg>
-		<constructor-arg index="2">
+		<constructor-arg>
 			<list>
-				<value>"com.sun.media.imageioimpl.plugins.gif.GIFImageWriterSpi"</value>
-				<value>"com.sun.media.imageio.plugins.gif.GIFImageWriterSpi"</value>
-			</list>
-		</constructor-arg>
-	</bean>
-
-	<bean id="JPEGEncoder" class="org.geowebcache.io.ImageEncoder">
-		<constructor-arg index="0" value="true" />
-		<constructor-arg index="1">
-			<list>
-				<value>"jpeg"</value>
-			</list>
-		</constructor-arg>
-		<constructor-arg index="2">
-			<list>
-				<value>"it.geosolutions.imageio.plugins.turbojpeg.TurboJpegImageWriterSpi"</value>
-				<value>"com.sun.media.imageioimpl.plugins.jpeg.CLibJPEGImageWriterSpi"</value>
-				<value>"com.sun.imageio.plugins.jpeg.JPEGImageWriterSpi"</value>
+				<value>com.sun.media.imageioimpl.plugins.gif.GIFImageWriterSpi</value>
+				<value>com.sun.media.imageio.plugins.gif.GIFImageWriterSpi</value>
 			</list>
 		</constructor-arg>
 	</bean>
 
-	<bean id="TIFFEncoder" class="org.geowebcache.io.ImageEncoder">
-		<constructor-arg index="0" value="false" />
-		<constructor-arg index="1">
+	<bean id="JPEGEncoder" class="org.geowebcache.io.ImageEncoderImpl">
+		<constructor-arg type="boolean" value="true" />
+		<constructor-arg>
 			<list>
-				<value>"tiff"</value>
+				<value>image/jpeg</value>
 			</list>
 		</constructor-arg>
-		<constructor-arg index="2">
+		<constructor-arg>
 			<list>
-				<value>"it.geosolutions.imageioimpl.plugins.tiff.TIFFImageWriterSpi"</value>
-				<value>"com.sun.media.imageioimpl.plugins.tiff.TIFFImageWriterSpi"</value>
+				<value>it.geosolutions.imageio.plugins.turbojpeg.TurboJpegImageWriterSpi</value>
+				<value>com.sun.media.imageioimpl.plugins.jpeg.CLibJPEGImageWriterSpi</value>
+				<value>com.sun.imageio.plugins.jpeg.JPEGImageWriterSpi</value>
 			</list>
 		</constructor-arg>
 	</bean>
 
-	<bean id="BMPEncoder" class="org.geowebcache.io.ImageEncoder">
-		<constructor-arg index="0" value="true" />
-		<constructor-arg index="1">
+	<bean id="TIFFEncoder" class="org.geowebcache.io.ImageEncoderImpl">
+		<constructor-arg type="boolean" value="false" />
+		<constructor-arg>
 			<list>
-				<value>"bmp"</value>
+				<value>image/tiff</value>
 			</list>
 		</constructor-arg>
-		<constructor-arg index="2">
+		<constructor-arg>
 			<list>
-				<value>"com.sun.media.imageioimpl.plugins.bmp.BMPImageWriterSpi"</value>
-				<value>"com.sun.imageio.plugins.bmp.BMPImageWriterSpi"</value>
+				<value>it.geosolutions.imageioimpl.plugins.tiff.TIFFImageWriterSpi</value>
+				<value>com.sun.media.imageioimpl.plugins.tiff.TIFFImageWriterSpi</value>
+			</list>
+		</constructor-arg>
+	</bean>
+
+	<bean id="BMPEncoder" class="org.geowebcache.io.ImageEncoderImpl">
+		<constructor-arg type="boolean" value="true" />
+		<constructor-arg>
+			<list>
+				<value>image/bmp</value>
+			</list>
+		</constructor-arg>
+		<constructor-arg>
+			<list>
+				<value>com.sun.media.imageioimpl.plugins.bmp.BMPImageWriterSpi</value>
+				<value>com.sun.imageio.plugins.bmp.BMPImageWriterSpi</value>
 			</list>
 		</constructor-arg>
 	</bean>
 
 	<!--Decoders -->
 
-	<bean id="PNGDecoder" class="org.geowebcache.io.ImageDecoder">
-		<constructor-arg index="0" value="true" />
-		<constructor-arg index="1">
+	<bean id="PNGDecoder" class="org.geowebcache.io.ImageDecoderImpl">
+		<constructor-arg type="boolean" value="false" />
+		<constructor-arg>
 			<list>
-				<value>"png"</value>
-				<value>"png8"</value>
-				<value>"png24"</value>
-				<value>"png_24"</value>
+				<value>image/png</value>
+				<value>image/png; mode=24bit</value>
 			</list>
 		</constructor-arg>
-		<constructor-arg index="2">
+		<constructor-arg>
 			<list>
-				<value>"com.sun.media.imageioimpl.plugins.png.CLibPNGImageReaderSpi"</value>
-				<value>"com.sun.imageio.plugins.png.PNGImageReaderSpi"</value>
-			</list>
-		</constructor-arg>
-	</bean>
-
-	<bean id="GIFDecoder" class="org.geowebcache.io.ImageDecoder">
-		<constructor-arg index="0" value="true" />
-		<constructor-arg index="1">
-			<list>
-				<value>"gif"</value>
-			</list>
-		</constructor-arg>
-		<constructor-arg index="2">
-			<list>
-				<value>"com.sun.imageio.plugins.gif.GIFImageReaderSpi"</value>
+				<value>com.sun.media.imageioimpl.plugins.png.CLibPNGImageReaderSpi</value>
+				<value>com.sun.imageio.plugins.png.PNGImageReaderSpi</value>
 			</list>
 		</constructor-arg>
 	</bean>
 
-	<bean id="JPEGDecoder" class="org.geowebcache.io.ImageDecoder">
-		<constructor-arg index="0" value="true" />
-		<constructor-arg index="1">
+	<bean id="GIFDecoder" class="org.geowebcache.io.ImageDecoderImpl">
+		<constructor-arg type="boolean" value="true" />
+		<constructor-arg>
 			<list>
-				<value>"jpeg"</value>
+				<value>image/gif</value>
 			</list>
 		</constructor-arg>
-		<constructor-arg index="2">
+		<constructor-arg>
 			<list>
-				<value>"it.geosolutions.imageio.plugins.turbojpeg.TurboJpegImageReaderSpi"</value>
-				<value>"com.sun.media.imageioimpl.plugins.jpeg.CLibJPEGImageReaderSpi"</value>
-				<value>"com.sun.imageio.plugins.jpeg.JPEGImageReaderSpi"</value>
-			</list>
-		</constructor-arg>
-	</bean>
-
-	<bean id="TIFFDecoder" class="org.geowebcache.io.ImageDecoder">
-		<constructor-arg index="0" value="false" />
-		<constructor-arg index="1">
-			<list>
-				<value>"tiff"</value>
-			</list>
-		</constructor-arg>
-		<constructor-arg index="2">
-			<list>
-				<value>"it.geosolutions.imageioimpl.plugins.tiff.TIFFImageReaderSpi"</value>
-				<value>"com.sun.media.imageioimpl.plugins.tiff.TIFFImageReaderSpi"</value>
+				<value>com.sun.imageio.plugins.gif.GIFImageReaderSpi</value>
 			</list>
 		</constructor-arg>
 	</bean>
 
-	<bean id="BMPDecoder" class="org.geowebcache.io.ImageDecoder">
-		<constructor-arg index="0" value="true" />
-		<constructor-arg index="1">
+	<bean id="JPEGDecoder" class="org.geowebcache.io.ImageDecoderImpl">
+		<constructor-arg type="boolean" value="true" />
+		<constructor-arg>
 			<list>
-				<value>"bmp"</value>
+				<value>image/jpeg</value>
 			</list>
 		</constructor-arg>
-		<constructor-arg index="2">
+		<constructor-arg>
 			<list>
-				<value>"com.sun.media.imageioimpl.plugins.bmp.BMPImageReaderSpi"</value>
-				<value>"com.sun.imageio.plugins.bmp.BMPImageReaderSpi"</value>
+				<value>it.geosolutions.imageio.plugins.turbojpeg.TurboJpegImageReaderSpi</value>
+				<value>com.sun.media.imageioimpl.plugins.jpeg.CLibJPEGImageReaderSpi</value>
+				<value>com.sun.imageio.plugins.jpeg.JPEGImageReaderSpi</value>
 			</list>
 		</constructor-arg>
 	</bean>
 
+	<bean id="TIFFDecoder" class="org.geowebcache.io.ImageDecoderImpl">
+		<constructor-arg type="boolean" value="false" />
+		<constructor-arg>
+			<list>
+				<value>image/tiff</value>
+			</list>
+		</constructor-arg>
+		<constructor-arg>
+			<list>
+				<value>it.geosolutions.imageioimpl.plugins.tiff.TIFFImageReaderSpi</value>
+				<value>com.sun.media.imageioimpl.plugins.tiff.TIFFImageReaderSpi</value>
+			</list>
+		</constructor-arg>
+	</bean>
+
+	<bean id="BMPDecoder" class="org.geowebcache.io.ImageDecoderImpl">
+		<constructor-arg type="boolean" value="true" />
+		<constructor-arg>
+			<list>
+				<value>image/bmp</value>
+			</list>
+		</constructor-arg>
+		<constructor-arg>
+			<list>
+				<value>com.sun.media.imageioimpl.plugins.bmp.BMPImageReaderSpi</value>
+				<value>com.sun.imageio.plugins.bmp.BMPImageReaderSpi</value>
+			</list>
+		</constructor-arg>
+	</bean>
+
+	<bean id="decoderContainer" class="org.geowebcache.io.ImageDecoderContainer" />
+
+	<bean id="encoderContainer" class="org.geowebcache.io.ImageEncoderContainer" />
 </beans>

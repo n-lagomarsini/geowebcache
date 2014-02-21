@@ -18,6 +18,7 @@ package org.geowebcache.service.wms;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
@@ -53,6 +54,7 @@ import org.geowebcache.grid.OutsideCoverageException;
 import org.geowebcache.grid.SRS;
 import org.geowebcache.io.ImageDecoderContainer;
 import org.geowebcache.io.ImageEncoderContainer;
+import org.geowebcache.io.Resource;
 import org.geowebcache.layer.TileLayer;
 import org.geowebcache.layer.TileLayerDispatcher;
 import org.geowebcache.layer.wms.WMSLayer;
@@ -153,6 +155,86 @@ public class WMSTileFuser implements ApplicationContextAware{
     
     private ImageEncoderContainer encoderMap;
 
+    
+    public enum HintsLevel {
+        QUALITY(0, "quality"), DEFAULT(1, "default"), SPEED(2, "speed");
+
+        private RenderingHints hints;
+
+        private String mode;
+
+        HintsLevel(int numHint, String mode) {
+            this.mode = mode;
+            switch (numHint) {
+            case 0:
+                hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+                hints.add(new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,
+                        RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY));
+                hints.add(new RenderingHints(RenderingHints.KEY_INTERPOLATION,
+                        RenderingHints.VALUE_INTERPOLATION_BILINEAR));
+                hints.add(new RenderingHints(RenderingHints.KEY_RENDERING,
+                        RenderingHints.VALUE_RENDER_QUALITY));
+                hints.add(new RenderingHints(RenderingHints.KEY_TEXT_ANTIALIASING,
+                        RenderingHints.VALUE_TEXT_ANTIALIAS_ON));
+                hints.add(new RenderingHints(RenderingHints.KEY_STROKE_CONTROL,
+                        RenderingHints.VALUE_STROKE_NORMALIZE));
+                break;
+            case 1:
+                hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_DEFAULT);
+                hints.add(new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,
+                        RenderingHints.VALUE_ALPHA_INTERPOLATION_DEFAULT));
+                hints.add(new RenderingHints(RenderingHints.KEY_RENDERING,
+                        RenderingHints.VALUE_RENDER_DEFAULT));
+                hints.add(new RenderingHints(RenderingHints.KEY_TEXT_ANTIALIASING,
+                        RenderingHints.VALUE_TEXT_ANTIALIAS_DEFAULT));
+                hints.add(new RenderingHints(RenderingHints.KEY_STROKE_CONTROL,
+                        RenderingHints.VALUE_STROKE_DEFAULT));
+                break;
+            case 2:
+                hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_OFF);
+                hints.add(new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,
+                        RenderingHints.VALUE_ALPHA_INTERPOLATION_SPEED));
+                hints.add(new RenderingHints(RenderingHints.KEY_INTERPOLATION,
+                        RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR));
+                hints.add(new RenderingHints(RenderingHints.KEY_RENDERING,
+                        RenderingHints.VALUE_RENDER_SPEED));
+                hints.add(new RenderingHints(RenderingHints.KEY_TEXT_ANTIALIASING,
+                        RenderingHints.VALUE_TEXT_ANTIALIAS_OFF));
+                hints.add(new RenderingHints(RenderingHints.KEY_STROKE_CONTROL,
+                        RenderingHints.VALUE_STROKE_PURE));
+                break;
+            }
+        }
+
+        public RenderingHints getRenderingHints() {
+            return hints;
+        }
+
+        public String getModeName(){
+            return mode;
+        }
+        
+        public static HintsLevel getHintsForMode(String mode) {
+
+            if(mode!=null){
+                if (mode.equalsIgnoreCase(QUALITY.getModeName())) {
+                    return QUALITY;
+                }else if(mode.equalsIgnoreCase(SPEED.getModeName())){
+                    return SPEED;
+                }else{
+                    return DEFAULT;
+                }
+            }else{
+                return DEFAULT;
+            }
+        }
+
+    }
+    
+    
     protected WMSTileFuser(TileLayerDispatcher tld, StorageBroker sb, HttpServletRequest servReq)
             throws GeoWebCacheException {
         this.sb = sb;
@@ -170,13 +252,23 @@ public class WMSTileFuser implements ApplicationContextAware{
 
         List<MimeType> ml = layer.getMimeTypes();
         Iterator<MimeType> iter = ml.iterator();
+        
+        ImageMime firstMt = null;
+        
+        if(iter.hasNext()){
+            firstMt = (ImageMime)iter.next();
+        }
+        
         while (iter.hasNext()) {
             MimeType mt = iter.next();
-            this.srcFormat = (ImageMime)mt;
             if (mt.getInternalName().equalsIgnoreCase("png")) {
                 this.srcFormat = (ImageMime) mt;
                 break;
             }
+        }
+        
+        if(srcFormat == null){
+            srcFormat = firstMt;
         }
         
         gridSubset = layer.getGridSubsetForSRS(SRS.getSRS(values.get("srs")));
@@ -214,13 +306,22 @@ public class WMSTileFuser implements ApplicationContextAware{
         
         List<MimeType> ml = layer.getMimeTypes();
         Iterator<MimeType> iter = ml.iterator();
+        ImageMime firstMt = null;
+        
+        if(iter.hasNext()){
+            firstMt = (ImageMime)iter.next();
+        }
+        
         while (iter.hasNext()) {
             MimeType mt = iter.next();
-            this.srcFormat = (ImageMime)mt;
             if (mt.getInternalName().equalsIgnoreCase("png")) {
                 this.srcFormat = (ImageMime) mt;
                 break;
             }
+        }
+        
+        if(srcFormat == null){
+            srcFormat = firstMt;
         }
     }
 
@@ -354,6 +455,13 @@ public class WMSTileFuser implements ApplicationContextAware{
             gfx.setColor(bgColor);
             gfx.fillRect(0, 0, canvasSize[0], canvasSize[1]);
         }
+        final RenderingHints hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
+        hints.add(new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY));
+        hints.add(new RenderingHints(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_BILINEAR));
+        hints.add(new RenderingHints(RenderingHints.KEY_RENDERING,RenderingHints.VALUE_RENDER_QUALITY));
+        hints.add(new RenderingHints(RenderingHints.KEY_TEXT_ANTIALIASING,RenderingHints.VALUE_TEXT_ANTIALIAS_ON));
+        hints.add(new RenderingHints(RenderingHints.KEY_STROKE_CONTROL,RenderingHints.VALUE_STROKE_NORMALIZE));
+        gfx.addRenderingHints(hints);
     }
 
     protected void renderCanvas() throws OutsideCoverageException, GeoWebCacheException,
@@ -400,7 +508,7 @@ public class WMSTileFuser implements ApplicationContextAware{
                 long[] gridLoc = { gridx, gridy, srcIdx };
 
                 ConveyorTile tile = new ConveyorTile(sb, layer.getName(), gridSubset.getName(),
-                        gridLoc, outputFormat, fullParameters, null, null);
+                        gridLoc, srcFormat, fullParameters, null, null);
 
                 // Check whether this tile is to be rendered at all
                 try {
@@ -412,10 +520,11 @@ public class WMSTileFuser implements ApplicationContextAware{
 
                 layer.getTile(tile);
                 // Selection of the resource input stream
-                InputStream stream = tile.getBlob().getInputStream();
+                Resource blob = tile.getBlob();
                 
-                String formatName = srcFormat.getInternalName();
-                BufferedImage tileImg = decoderMap.decode(formatName, stream, true, null);
+                String formatName = srcFormat.getMimeType();
+                BufferedImage tileImg = decoderMap.decode(formatName, blob, 
+                        decoderMap.isAggressiveInputStreamSupported(formatName), null);
                 
                 //BufferedImage tileImg = ImageIO.read(stream);
 
@@ -462,6 +571,7 @@ public class WMSTileFuser implements ApplicationContextAware{
                 // Render the tile on the big canvas
                 log.debug("drawImage(subtile," + canvasx + "," + canvasy + ",null) "
                         + Arrays.toString(gridLoc));
+
                 gfx.drawImage(tileImg, canvasx, canvasy, null); // imageObserver
             }
         }
@@ -484,7 +594,13 @@ public class WMSTileFuser implements ApplicationContextAware{
             log.debug("AffineTransform: " + (((double) reqWidth) / preTransform.getWidth()) + ","
                     + +(((double) reqHeight) / preTransform.getHeight()));
 
-            //gfx.addRenderingHints(hints)
+            final RenderingHints hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
+            hints.add(new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY));
+            hints.add(new RenderingHints(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_BILINEAR));
+            hints.add(new RenderingHints(RenderingHints.KEY_RENDERING,RenderingHints.VALUE_RENDER_QUALITY));
+            hints.add(new RenderingHints(RenderingHints.KEY_TEXT_ANTIALIASING,RenderingHints.VALUE_TEXT_ANTIALIAS_ON));
+            hints.add(new RenderingHints(RenderingHints.KEY_STROKE_CONTROL,RenderingHints.VALUE_STROKE_NORMALIZE));
+            gfx.addRenderingHints(hints);
             gfx.drawRenderedImage(preTransform, affineTrans);
             gfx.dispose();
         }
@@ -512,7 +628,7 @@ public class WMSTileFuser implements ApplicationContextAware{
           
           //ImageIO.write(finalImage, outputFormat.getInternalName(), aos);
           
-          String format = outputFormat.getInternalName();
+          String format = outputFormat.getMimeType();
           encoderMap.encode(finalImage, format, aos, encoderMap.isAggressiveOutputStreamSupported(format)
                 , null);
           
@@ -557,6 +673,7 @@ public class WMSTileFuser implements ApplicationContextAware{
     public void setApplicationContext(ApplicationContext context) throws BeansException {
         applicationContext = context; 
         decoderMap = applicationContext.getBean(ImageDecoderContainer.class);
-        encoderMap = applicationContext.getBean(ImageEncoderContainer.class);        
+        encoderMap = applicationContext.getBean(ImageEncoderContainer.class);
+        
     }
 }

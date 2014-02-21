@@ -1,7 +1,6 @@
 package org.geowebcache.io;
 
 import it.geosolutions.imageio.plugins.png.PNGWriter;
-import it.geosolutions.imageio.stream.output.ImageOutputStreamAdapter;
 
 import java.awt.image.RenderedImage;
 import java.io.IOException;
@@ -10,17 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.imageio.stream.ImageOutputStream;
-import javax.imageio.stream.MemoryCacheImageOutputStream;
-
 import org.apache.log4j.Logger;
 import org.geotools.image.ImageWorker;
 import org.geowebcache.mime.ImageMime;
-import org.springframework.beans.factory.annotation.Value;
 
 import ar.com.hjg.pngj.FilterType;
 
-public class PNGImageEncoder extends ImageEncoder {
+public class PNGImageEncoder extends ImageEncoderImpl {
     
     private static final String FILTER_TYPE = "filterType";
 
@@ -65,7 +60,7 @@ public class PNGImageEncoder extends ImageEncoder {
     
     
     public void encode(RenderedImage image, Object destination,
-            boolean aggressiveOutputStreamOptimization, Map<String,Object> map) {
+            boolean aggressiveOutputStreamOptimization, Map<String,?> map) {
 
         if (!isAgressiveOutputStreamSupported() && aggressiveOutputStreamOptimization) {
             throw new UnsupportedOperationException(OPERATION_NOT_SUPPORTED);
@@ -85,9 +80,11 @@ public class PNGImageEncoder extends ImageEncoder {
                     boolean isScanlinePresent = writer.isScanlineSupported(image);
                     if(!isScanlinePresent){
                         image = new ImageWorker(image).rescaleToBytes().forceComponentColorModel().getRenderedImage();
-                    }        
-                    
-                    Object filterObj = map.get(FILTER_TYPE);
+                    }       
+                    Object filterObj = null;
+                    if(map!=null){
+                        filterObj= map.get(FILTER_TYPE);
+                    }                    
                     FilterType filter = null;
                     if(filterObj==null || !(filterObj instanceof FilterType)){
                         filter = FilterType.FILTER_NONE;

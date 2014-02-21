@@ -51,8 +51,11 @@ import org.geowebcache.storage.StorageBroker;
 import org.geowebcache.util.NullURLMangler;
 import org.geowebcache.util.ServletUtils;
 import org.geowebcache.util.URLMangler;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
-public class WMSService extends Service {
+public class WMSService extends Service implements ApplicationContextAware{
     public static final String SERVICE_WMS = "wms";
     
     static final String SERVICE_PATH = "/"+GeoWebCacheDispatcher.TYPE_SERVICE+"/"+SERVICE_WMS;
@@ -77,6 +80,8 @@ public class WMSService extends Service {
     private URLMangler urlMangler = new NullURLMangler();
     
     private GeoWebCacheDispatcher controller = null;
+
+    private ApplicationContext applicationContext;
     
 
     /**
@@ -257,6 +262,7 @@ public class WMSService extends Service {
                 wmsCap.writeResponse(tile.servletResp);
             } else if (tile.getHint().equalsIgnoreCase("getmap")) {
                 WMSTileFuser wmsFuser = new WMSTileFuser(tld, sb, tile.servletReq);
+                wmsFuser.setApplicationContext(applicationContext);
                 try {
                     wmsFuser.writeResponse(tile.servletResp, stats);
                 } catch (IOException e) {
@@ -393,5 +399,9 @@ public class WMSService extends Service {
         } else {
             log.info("Will NOT proxy requests that miss tiled=true to backend.");
         }
+    }
+
+    public void setApplicationContext(ApplicationContext context) throws BeansException {
+        this.applicationContext=context;       
     }
 }
