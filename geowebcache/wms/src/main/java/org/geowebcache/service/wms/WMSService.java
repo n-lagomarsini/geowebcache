@@ -83,6 +83,8 @@ public class WMSService extends Service implements ApplicationContextAware{
 
     private ApplicationContext applicationContext;
     
+    private String hintsConfig = "DEFAULT";
+    
 
     /**
      * Protected no-argument constructor to allow run-time instrumentation
@@ -262,7 +264,10 @@ public class WMSService extends Service implements ApplicationContextAware{
                 wmsCap.writeResponse(tile.servletResp);
             } else if (tile.getHint().equalsIgnoreCase("getmap")) {
                 WMSTileFuser wmsFuser = new WMSTileFuser(tld, sb, tile.servletReq);
+                // Setting of the applicationContext
                 wmsFuser.setApplicationContext(applicationContext);
+                // Setting of the hintConfiguration if present
+                wmsFuser.setHintsConfiguration(hintsConfig);
                 try {
                     wmsFuser.writeResponse(tile.servletResp, stats);
                 } catch (IOException e) {
@@ -399,6 +404,10 @@ public class WMSService extends Service implements ApplicationContextAware{
         } else {
             log.info("Will NOT proxy requests that miss tiled=true to backend.");
         }
+    }
+
+    public void setHintsConfig(String hintsConfig) {
+        this.hintsConfig = hintsConfig;
     }
 
     public void setApplicationContext(ApplicationContext context) throws BeansException {

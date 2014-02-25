@@ -9,15 +9,26 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.imageio.IIOException;
+import javax.imageio.IIOImage;
+import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
+import javax.imageio.plugins.jpeg.JPEGImageWriteParam;
 import javax.imageio.spi.IIORegistry;
 import javax.imageio.spi.ImageWriterSpi;
 import javax.imageio.stream.ImageOutputStream;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
 
 import org.apache.log4j.Logger;
+import org.geotools.image.ImageWorker.PNGImageWriteParam;
+import org.geotools.image.io.ImageIOExt;
+import org.geotools.resources.i18n.ErrorKeys;
+import org.geotools.resources.i18n.Errors;
 
-public class ImageEncoderImpl implements ImageEncoder{
+import com.sun.imageio.plugins.png.PNGImageWriter;
+import com.sun.media.imageioimpl.plugins.clib.CLibImageWriter;
+
+public class ImageEncoderImpl implements ImageEncoder {
 
     private static final Logger LOGGER = Logger.getLogger(ImageEncoderImpl.class);
 
@@ -31,6 +42,45 @@ public class ImageEncoderImpl implements ImageEncoder{
 
     private ImageWriterSpi spi;
 
+    private Map<String, String> inputParams;
+
+    public enum WriteParams {
+        PNG("png", "png; mode=24bit"), JPEG("jpeg"), GIF("gif"), TIFF("tiff"), BMP("bmp");
+
+        private String[] formatNames;
+
+        WriteParams(String... formatNames) {
+            this.formatNames = formatNames;
+        }
+
+        private boolean isFormatNameAccepted(String formatName) {
+            boolean accepted = false;
+            for (String format : formatNames) {
+                accepted = format.equalsIgnoreCase(formatName);
+                if (accepted) {
+                    break;
+                }
+            }
+            return accepted;
+        }
+
+        public static WriteParams getWriteParamForName(String formatName) {
+
+            if (PNG.isFormatNameAccepted(formatName)) {
+                return PNG;
+            } else if (JPEG.isFormatNameAccepted(formatName)) {
+                return JPEG;
+            } else if (GIF.isFormatNameAccepted(formatName)) {
+                return GIF;
+            } else if (TIFF.isFormatNameAccepted(formatName)) {
+                return TIFF;
+            } else if (BMP.isFormatNameAccepted(formatName)) {
+                return BMP;
+            }
+            return null;
+        }
+    }
+
     /**
      * Encodes the selected image with the defined output object. The user can set the aggressive outputStream if supported.
      * 
@@ -40,7 +90,7 @@ public class ImageEncoderImpl implements ImageEncoder{
      * @throws IOException
      */
     public void encode(RenderedImage image, Object destination,
-            boolean aggressiveOutputStreamOptimization, Map<String,?> map) {
+            boolean aggressiveOutputStreamOptimization, Map<String, ?> map) {
 
         if (!isAgressiveOutputStreamSupported() && aggressiveOutputStreamOptimization) {
             throw new UnsupportedOperationException(OPERATION_NOT_SUPPORTED);
@@ -48,8 +98,8 @@ public class ImageEncoderImpl implements ImageEncoder{
 
         // Selection of the first priority writerSpi
         ImageWriterSpi newSpi = getWriterSpi();
-        
-        if(newSpi!=null){
+
+        if (newSpi != null) {
             // Creation of the associated Writer
             ImageWriter writer = null;
             ImageOutputStream stream = null;
@@ -64,9 +114,12 @@ public class ImageEncoderImpl implements ImageEncoder{
                         stream = new MemoryCacheImageOutputStream((OutputStream) destination);
                     }
 
+                    // Preparation of the ImageWriteParams
+                    ImageWriteParam params = prepareParams(writer);
+
                     // Image writing
                     writer.setOutput(stream);
-                    writer.write(image);
+                    writer.write(null, new IIOImage(image, null, null), params);
                 } else {
                     throw new IllegalArgumentException("Wrong output object");
                 }
@@ -90,8 +143,100 @@ public class ImageEncoderImpl implements ImageEncoder{
         }
     }
 
+    private ImageWriteParam prepareParams(ImageWriter writer) throws IOException {
+
+        String mimeType0 = supportedMimeTypes.get(0);
+
+        int beginIndex = 6;
+        WriteParams paramEnum = WriteParams.getWriteParamForName(mimeType0.substring(beginIndex));
+
+        ImageWriteParam params = null;
+        // Selection of the compression type
+        String compression = inputParams.get("COMPRESSION");
+        // Boolean indicating if compression is present
+        boolean compressUsed = compression != null && !compression.isEmpty()
+                && !compression.equalsIgnoreCase("null");
+        // Selection of the compression rate
+        String compressionRateValue = inputParams.get("COMPRESSION_RATE");
+        // Initial value for the compression rate
+        float compressionRate = -1;
+        // Evaluation of the compression rate
+        if (compressionRateValue != null) {
+            try {
+                compressionRate = Float.parseFloat(compressionRateValue);
+            } catch (NumberFormatException e) {
+                //Do nothing and skip compression rate
+            }
+        }
+
+        switch (paramEnum) {
+        case PNG:
+            if (writer instanceof CLibImageWriter) {
+                params = writer.getDefaultWriteParam();
+                // Define compression mode
+                params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                if (compressUsed) {
+                    // best compression
+                    params.setCompressionType(compression);
+                }
+                if (compressionRate > -1) {
+                    // we can control quality here
+                    params.setCompressionQuality(compressionRate);
+                }
+            } else if (writer instanceof PNGImageWriter) {
+                params = new PNGImageWriteParam();
+                // Define compression mode
+                params.setCompressionMode(ImageWriteParam.MODE_DEFAULT);
+            }
+            break;
+        case JPEG:
+            params = writer.getDefaultWriteParam();
+            params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            if (compressUsed) {
+                // Lossy compression.
+                params.setCompressionType(compression);
+            }
+            if (compressionRate > -1) {
+                // we can control quality here
+                params.setCompressionQuality(compressionRate);
+            }
+            // If JPEGWriteParams, additional parameters are set
+            if (params instanceof JPEGImageWriteParam) {
+                final JPEGImageWriteParam jpegParams = (JPEGImageWriteParam) params;
+                jpegParams.setOptimizeHuffmanTables(true);
+                try {
+                    jpegParams.setProgressiveMode(JPEGImageWriteParam.MODE_DEFAULT);
+                } catch (UnsupportedOperationException e) {
+                    throw new IOException(e);
+                }
+
+                params = jpegParams;
+            }
+            break;
+        case GIF:
+        case TIFF:
+        case BMP:
+            params = writer.getDefaultWriteParam();
+            params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            if (compressUsed) {
+                // best compression
+                params.setCompressionType(compression);
+            }
+            if (compressionRate > -1) {
+                // we can control quality here
+                params.setCompressionQuality(compressionRate);
+            }
+            break;
+        default:
+            break;
+        }
+
+        return params;
+    }
+
     /**
-     * Returns the ImageSpiWriter associated to 
+     * Returns the ImageSpiWriter associated to
+     * 
      * @return
      */
     private ImageWriterSpi getWriterSpi() {
@@ -115,7 +260,7 @@ public class ImageEncoderImpl implements ImageEncoder{
     public boolean isAgressiveOutputStreamSupported() {
         return isAggressiveOutputStreamSupported;
     }
-    
+
     /**
      * Creates a new Instance of ImageEncoder supporting or not OutputStream optimization, with the defined MimeTypes and Spi classes.
      * 
@@ -124,20 +269,21 @@ public class ImageEncoderImpl implements ImageEncoder{
      * @param writerSpi
      */
     public ImageEncoderImpl(boolean aggressiveOutputStreamOptimization,
-            List<String> supportedMimeTypes, List<String> writerSpi) {
+            List<String> supportedMimeTypes, List<String> writerSpi, Map<String, String> inputParams) {
         this.isAggressiveOutputStreamSupported = aggressiveOutputStreamOptimization;
         this.supportedMimeTypes = new ArrayList<String>(supportedMimeTypes);
+        this.inputParams = inputParams;
         // Registration of the plugins
         theRegistry.registerApplicationClasspathSpis();
         // Checks for each Spi class if it is present and then it is added to the list.
         for (String spi : writerSpi) {
             try {
-             
+
                 Class<?> clazz = Class.forName(spi);
                 ImageWriterSpi writer = (ImageWriterSpi) theRegistry
                         .getServiceProviderByClass(clazz);
                 if (writer != null) {
-                    this.spi=writer;
+                    this.spi = writer;
                     break;
                 }
             } catch (ClassNotFoundException e) {

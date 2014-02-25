@@ -155,6 +155,8 @@ public class WMSTileFuser implements ApplicationContextAware{
     
     private ImageEncoderContainer encoderMap;
 
+    private RenderingHints hints;
+
     
     public enum HintsLevel {
         QUALITY(0, "quality"), DEFAULT(1, "default"), SPEED(2, "speed");
@@ -240,7 +242,7 @@ public class WMSTileFuser implements ApplicationContextAware{
         this.sb = sb;
 
         String[] keys = { "layers", "format", "srs", "bbox", "width", "height", "transparent",
-                "bgcolor" };
+                "bgcolor", "hints" };
 
         Map<String, String> values = ServletUtils.selectedStringsFromMap(servReq.getParameterMap(),
                 servReq.getCharacterEncoding(), keys);
@@ -249,7 +251,11 @@ public class WMSTileFuser implements ApplicationContextAware{
 
         String layerName = values.get("layers");
         layer = tld.getTileLayer(layerName);
+        
+        gridSubset = layer.getGridSubsetForSRS(SRS.getSRS(values.get("srs")));
 
+        outputFormat = (ImageMime) ImageMime.createFromFormat(values.get("format"));
+        
         List<MimeType> ml = layer.getMimeTypes();
         Iterator<MimeType> iter = ml.iterator();
         
@@ -258,22 +264,25 @@ public class WMSTileFuser implements ApplicationContextAware{
         if(iter.hasNext()){
             firstMt = (ImageMime)iter.next();
         }
-        
+        boolean outputGif = outputFormat.getInternalName().equalsIgnoreCase("gif");
         while (iter.hasNext()) {
-            MimeType mt = iter.next();
-            if (mt.getInternalName().equalsIgnoreCase("png")) {
-                this.srcFormat = (ImageMime) mt;
-                break;
+            MimeType mt = iter.next();           
+            if(outputGif){
+                if (mt.getInternalName().equalsIgnoreCase("gif")) {
+                    this.srcFormat = (ImageMime) mt;
+                    break;
+                }
+            }else {
+                if (mt.getInternalName().equalsIgnoreCase("png")) {
+                    this.srcFormat = (ImageMime) mt;
+                    break;
+                }
             }
         }
         
         if(srcFormat == null){
             srcFormat = firstMt;
         }
-        
-        gridSubset = layer.getGridSubsetForSRS(SRS.getSRS(values.get("srs")));
-
-        outputFormat = (ImageMime) ImageMime.createFromFormat(values.get("format"));
 
         reqBounds = new BoundingBox(values.get("bbox"));
 
@@ -291,6 +300,9 @@ public class WMSTileFuser implements ApplicationContextAware{
 
         fullParameters = layer.getModifiableParameters(servReq.getParameterMap(),
                 servReq.getCharacterEncoding());
+        if(values.get("hints")!=null){
+            hints = HintsLevel.getHintsForMode(values.get("hints")).getRenderingHints();
+        }        
     }
 
     protected WMSTileFuser(TileLayer layer, GridSubset gridSubset, BoundingBox bounds, int width,
@@ -455,13 +467,14 @@ public class WMSTileFuser implements ApplicationContextAware{
             gfx.setColor(bgColor);
             gfx.fillRect(0, 0, canvasSize[0], canvasSize[1]);
         }
-        final RenderingHints hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
-        hints.add(new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY));
-        hints.add(new RenderingHints(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_BILINEAR));
-        hints.add(new RenderingHints(RenderingHints.KEY_RENDERING,RenderingHints.VALUE_RENDER_QUALITY));
-        hints.add(new RenderingHints(RenderingHints.KEY_TEXT_ANTIALIASING,RenderingHints.VALUE_TEXT_ANTIALIAS_ON));
-        hints.add(new RenderingHints(RenderingHints.KEY_STROKE_CONTROL,RenderingHints.VALUE_STROKE_NORMALIZE));
-        gfx.addRenderingHints(hints);
+        
+        // Hints settings
+        RenderingHints hintsTemp = HintsLevel.DEFAULT.getRenderingHints();
+        
+        if(hints!=null){
+            hintsTemp = hints;
+        }
+        gfx.addRenderingHints(hintsTemp);
     }
 
     protected void renderCanvas() throws OutsideCoverageException, GeoWebCacheException,
@@ -593,14 +606,13 @@ public class WMSTileFuser implements ApplicationContextAware{
 
             log.debug("AffineTransform: " + (((double) reqWidth) / preTransform.getWidth()) + ","
                     + +(((double) reqHeight) / preTransform.getHeight()));
-
-            final RenderingHints hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
-            hints.add(new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY));
-            hints.add(new RenderingHints(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_BILINEAR));
-            hints.add(new RenderingHints(RenderingHints.KEY_RENDERING,RenderingHints.VALUE_RENDER_QUALITY));
-            hints.add(new RenderingHints(RenderingHints.KEY_TEXT_ANTIALIASING,RenderingHints.VALUE_TEXT_ANTIALIAS_ON));
-            hints.add(new RenderingHints(RenderingHints.KEY_STROKE_CONTROL,RenderingHints.VALUE_STROKE_NORMALIZE));
-            gfx.addRenderingHints(hints);
+            // Hints settings
+            RenderingHints hintsTemp = HintsLevel.DEFAULT.getRenderingHints();
+            
+            if(hints!=null){
+                hintsTemp = hints;
+            }
+            gfx.addRenderingHints(hintsTemp);
             gfx.drawRenderedImage(preTransform, affineTrans);
             gfx.dispose();
         }
@@ -674,6 +686,13 @@ public class WMSTileFuser implements ApplicationContextAware{
         applicationContext = context; 
         decoderMap = applicationContext.getBean(ImageDecoderContainer.class);
         encoderMap = applicationContext.getBean(ImageEncoderContainer.class);
+        
+    }
+
+    public void setHintsConfiguration(String hintsConfig) {
+        if(hints==null){
+            hints = HintsLevel.getHintsForMode(hintsConfig).getRenderingHints();
+        }
         
     }
 }

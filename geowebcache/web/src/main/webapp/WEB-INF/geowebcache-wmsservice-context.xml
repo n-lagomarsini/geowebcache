@@ -22,6 +22,10 @@
 		<property name="proxyRequests">
 			<value>TRUE</value>
 		</property>
+		<!-- Proxy unknown requests -->
+		<property name="hintsConfig">
+			<value>DEFAULT</value>
+		</property>
 	</bean>
 
 	<!--Encoders -->
@@ -34,6 +38,12 @@
 				<value>com.sun.media.imageioimpl.plugins.png.CLibPNGImageWriterSpi</value>
 				<value>com.sun.imageio.plugins.png.PNGImageWriterSpi</value>
 			</list>
+		</constructor-arg>
+		<constructor-arg>
+			<map>
+				<entry key="COMPRESSION" value="FILTERED" />
+				<entry key="COMPRESSION_RATE" value="0.75" />
+			</map>
 		</constructor-arg>
 		<property name="disablePNG">
 			<value>FALSE</value>
@@ -53,6 +63,12 @@
 				<value>com.sun.media.imageio.plugins.gif.GIFImageWriterSpi</value>
 			</list>
 		</constructor-arg>
+		<constructor-arg>
+			<map>
+				<entry key="COMPRESSION" value="NULL" />
+				<entry key="COMPRESSION_RATE" value="NULL" />
+			</map>
+		</constructor-arg>
 	</bean>
 
 	<bean id="JPEGEncoder" class="org.geowebcache.io.ImageEncoderImpl">
@@ -69,6 +85,12 @@
 				<value>com.sun.imageio.plugins.jpeg.JPEGImageWriterSpi</value>
 			</list>
 		</constructor-arg>
+		<constructor-arg>
+			<map>
+				<entry key="COMPRESSION" value="JPEG" />
+				<entry key="COMPRESSION_RATE" value="0.75" />
+			</map>
+		</constructor-arg>
 	</bean>
 
 	<bean id="TIFFEncoder" class="org.geowebcache.io.ImageEncoderImpl">
@@ -84,6 +106,12 @@
 				<value>com.sun.media.imageioimpl.plugins.tiff.TIFFImageWriterSpi</value>
 			</list>
 		</constructor-arg>
+		<constructor-arg>
+			<map>
+				<entry key="COMPRESSION" value="Deflate" />
+				<entry key="COMPRESSION_RATE" value="0.75" />
+			</map>
+		</constructor-arg>
 	</bean>
 
 	<bean id="BMPEncoder" class="org.geowebcache.io.ImageEncoderImpl">
@@ -98,6 +126,12 @@
 				<value>com.sun.media.imageioimpl.plugins.bmp.BMPImageWriterSpi</value>
 				<value>com.sun.imageio.plugins.bmp.BMPImageWriterSpi</value>
 			</list>
+		</constructor-arg>
+		<constructor-arg>
+			<map>
+				<entry key="COMPRESSION" value="NULL" />
+				<entry key="COMPRESSION_RATE" value="NULL" />
+			</map>
 		</constructor-arg>
 	</bean>
 
