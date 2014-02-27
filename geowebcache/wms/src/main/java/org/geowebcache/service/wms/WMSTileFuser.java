@@ -21,10 +21,8 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.awt.image.IndexColorModel;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -39,10 +37,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.geotools.image.ImageWorker;
-import org.geotools.image.palette.ColorIndexer;
-import org.geotools.image.palette.ColorIndexerDescriptor;
-import org.geotools.image.palette.Quantizer;
 import org.geotools.resources.image.ImageUtilities;
 import org.geowebcache.GeoWebCacheException;
 import org.geowebcache.conveyor.Conveyor.CacheResult;
@@ -65,10 +59,7 @@ import org.geowebcache.storage.StorageBroker;
 import org.geowebcache.util.AccountingOutputStream;
 import org.geowebcache.util.ServletUtils;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /*
  * It will work as follows
@@ -77,7 +68,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
  * 4) GWC will scale the raster down to the requested dimensions.
  * 5) GWC will then compress the raster to the desired output format and return the image. The image is not cached. 
  */
-public class WMSTileFuser implements ApplicationContextAware{
+public class WMSTileFuser{
     private static Log log = LogFactory.getLog(WMSTileFuser.class);
     
     private ApplicationContext applicationContext;
@@ -120,9 +111,9 @@ public class WMSTileFuser implements ApplicationContextAware{
 
     // The spatial extent of the tiles used to fulfil the request
     BoundingBox srcBounds;
-
+    // 
     BoundingBox canvasBounds;
-
+    /**Canvas dimensions*/
     int[] canvasSize = new int[2];
 
     static class SpatialOffsets {
@@ -138,26 +129,30 @@ public class WMSTileFuser implements ApplicationContextAware{
         int right;
     };
     
-    // These are values before scaling
+    /** These are values before scaling */
     PixelOffsets canvOfs = new PixelOffsets();
 
     SpatialOffsets boundOfs = new SpatialOffsets();
-
+    /** Mosaic image*/
     BufferedImage canvas;
-
+    /** Graphics object used for drawing the tiles into a mosaic*/
     Graphics2D gfx;
 
+    /**Layer parameters*/
     private Map<String, String> fullParameters;
 
-    
+    /** Map of all the possible decoders to use*/
     private ImageDecoderContainer decoderMap;
     
-    
+    /** Map of all the possible encoders to use*/
     private ImageEncoderContainer encoderMap;
 
+    /** Hints used for writing the BufferedImage on the canvas*/
     private RenderingHints hints;
 
-    
+    /**
+     *Enum storing the Hints associated to one of the 3 configurations(SPEED, QUALITY, DEFAULT)
+     */
     public enum HintsLevel {
         QUALITY(0, "quality"), DEFAULT(1, "default"), SPEED(2, "speed");
 
@@ -168,6 +163,7 @@ public class WMSTileFuser implements ApplicationContextAware{
         HintsLevel(int numHint, String mode) {
             this.mode = mode;
             switch (numHint) {
+            // QUALITY HINTS
             case 0:
                 hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,
                         RenderingHints.VALUE_ANTIALIAS_ON);
@@ -182,6 +178,7 @@ public class WMSTileFuser implements ApplicationContextAware{
                 hints.add(new RenderingHints(RenderingHints.KEY_STROKE_CONTROL,
                         RenderingHints.VALUE_STROKE_NORMALIZE));
                 break;
+            // DEFAULT HINTS
             case 1:
                 hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,
                         RenderingHints.VALUE_ANTIALIAS_DEFAULT);
@@ -194,6 +191,7 @@ public class WMSTileFuser implements ApplicationContextAware{
                 hints.add(new RenderingHints(RenderingHints.KEY_STROKE_CONTROL,
                         RenderingHints.VALUE_STROKE_DEFAULT));
                 break;
+            // SPEED HINTS
             case 2:
                 hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,
                         RenderingHints.VALUE_ANTIALIAS_OFF);
@@ -233,7 +231,6 @@ public class WMSTileFuser implements ApplicationContextAware{
                 return DEFAULT;
             }
         }
-
     }
     
     
@@ -272,11 +269,9 @@ public class WMSTileFuser implements ApplicationContextAware{
                     this.srcFormat = (ImageMime) mt;
                     break;
                 }
-            }else {
-                if (mt.getInternalName().equalsIgnoreCase("png")) {
-                    this.srcFormat = (ImageMime) mt;
-                    break;
-                }
+            }
+            if (mt.getInternalName().equalsIgnoreCase("png")) {
+                this.srcFormat = (ImageMime) mt;
             }
         }
         
@@ -289,14 +284,6 @@ public class WMSTileFuser implements ApplicationContextAware{
         reqWidth = Integer.valueOf(values.get("width"));
 
         reqHeight = Integer.valueOf(values.get("height"));
-
-        // if(values[6] != null) {
-        // this.reqTransparent = Boolean.valueOf(values[6]);
-        // }
-
-        // if(values[7] != null) {
-        // this.reqBgColor = values[7];
-        // }
 
         fullParameters = layer.getModifiableParameters(servReq.getParameterMap(),
                 servReq.getCharacterEncoding());
@@ -534,12 +521,10 @@ public class WMSTileFuser implements ApplicationContextAware{
                 layer.getTile(tile);
                 // Selection of the resource input stream
                 Resource blob = tile.getBlob();
-                
+                // Extraction of the image associated with the defined MimeType
                 String formatName = srcFormat.getMimeType();
                 BufferedImage tileImg = decoderMap.decode(formatName, blob, 
                         decoderMap.isAggressiveInputStreamSupported(formatName), null);
-                
-                //BufferedImage tileImg = ImageIO.read(stream);
 
                 int tilex = 0;
                 int canvasx = (int) (gridx - startx) * gridSubset.getTileWidth();
@@ -599,8 +584,7 @@ public class WMSTileFuser implements ApplicationContextAware{
             canvas = new BufferedImage(reqWidth, reqHeight, preTransform.getType());
 
             Graphics2D gfx = canvas.createGraphics();
-            // TODO ADD hints
-            //gfx.addRenderingHints(null);
+
             AffineTransform affineTrans = AffineTransform.getScaleInstance(((double) reqWidth)
                     / preTransform.getWidth(), ((double) reqHeight) / preTransform.getHeight());
 
@@ -629,7 +613,7 @@ public class WMSTileFuser implements ApplicationContextAware{
         AccountingOutputStream aos=null;
         RenderedImage finalImage =null;
         try{
-          finalImage = applyPalette();
+          finalImage = canvas;
 
           response.setStatus(HttpServletResponse.SC_OK);
           response.setContentType(this.outputFormat.getMimeType());
@@ -638,11 +622,9 @@ public class WMSTileFuser implements ApplicationContextAware{
           ServletOutputStream os = response.getOutputStream();
           aos = new AccountingOutputStream(os);         
           
-          //ImageIO.write(finalImage, outputFormat.getInternalName(), aos);
-          
-          String format = outputFormat.getMimeType();
-          encoderMap.encode(finalImage, format, aos, encoderMap.isAggressiveOutputStreamSupported(format)
-                , null);
+          // Image encoding with the associated writer
+          encoderMap.encode(finalImage, outputFormat, aos,
+                    encoderMap.isAggressiveOutputStreamSupported(outputFormat.getMimeType()), null);
           
           log.debug("WMS response size: " + aos.getCount() + "bytes.");
           stats.log(aos.getCount(), CacheResult.WMS);
@@ -660,28 +642,13 @@ public class WMSTileFuser implements ApplicationContextAware{
         	}
         }        
     }
-
-	private RenderedImage applyPalette() {
-		if(outputFormat.getMimeType().equals(ImageMime.png8.getMimeType())) {
-			if (!(canvas.getColorModel() instanceof IndexColorModel)) {
-                // try to force a RGBA setup
-				ImageWorker imageWorker = new ImageWorker(canvas);
-				RenderedImage image = imageWorker.rescaleToBytes().forceComponentColorModel()
-                        .getRenderedImage();
-                ColorIndexer indexer =  new Quantizer(256).subsample().buildColorIndexer(image);
-                
-
-                // if we have an indexer transform the image
-                if (indexer != null) {
-                    image = ColorIndexerDescriptor.create(image, indexer, null);
-                }
-                return image;
-            }
-		}
-		return canvas;
-		
-	}
 	
+    /**
+     * Setting of the ApplicationContext associated for extracting the related beans
+     * 
+     * @param context
+     * @throws BeansException
+     */
     public void setApplicationContext(ApplicationContext context) throws BeansException {
         applicationContext = context; 
         decoderMap = applicationContext.getBean(ImageDecoderContainer.class);
@@ -689,6 +656,10 @@ public class WMSTileFuser implements ApplicationContextAware{
         
     }
 
+    /**
+     * Setting of the hints configuration taken from the WMSService
+     * @param hintsConfig
+     */
     public void setHintsConfiguration(String hintsConfig) {
         if(hints==null){
             hints = HintsLevel.getHintsForMode(hintsConfig).getRenderingHints();

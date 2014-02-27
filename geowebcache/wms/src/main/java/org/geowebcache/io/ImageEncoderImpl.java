@@ -1,7 +1,25 @@
+/**
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * @author Nicola Lagomarsini, GeoSolutions S.A.S., Copyright 2014
+ * 
+ */
 package org.geowebcache.io;
 
 import it.geosolutions.imageio.stream.output.ImageOutputStreamAdapter;
 
+import java.awt.image.IndexColorModel;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -9,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.imageio.IIOException;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
@@ -20,10 +37,13 @@ import javax.imageio.stream.ImageOutputStream;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
 
 import org.apache.log4j.Logger;
+import org.geotools.image.ImageWorker;
 import org.geotools.image.ImageWorker.PNGImageWriteParam;
-import org.geotools.image.io.ImageIOExt;
-import org.geotools.resources.i18n.ErrorKeys;
-import org.geotools.resources.i18n.Errors;
+import org.geotools.image.palette.ColorIndexer;
+import org.geotools.image.palette.ColorIndexerDescriptor;
+import org.geotools.image.palette.Quantizer;
+import org.geowebcache.mime.ImageMime;
+import org.geowebcache.mime.MimeType;
 
 import com.sun.imageio.plugins.png.PNGImageWriter;
 import com.sun.media.imageioimpl.plugins.clib.CLibImageWriter;
@@ -44,13 +64,132 @@ public class ImageEncoderImpl implements ImageEncoder {
 
     private Map<String, String> inputParams;
 
-    public enum WriteParams {
-        PNG("png", "png; mode=24bit"), JPEG("jpeg"), GIF("gif"), TIFF("tiff"), BMP("bmp");
+    private WriteHelper helper;
+
+    /**
+     * This enum is used for preparing the image to write (prepareImage()) and the related ImageWriteParam(prepareParams()).
+     */
+    public enum WriteHelper {
+        PNG("image/png", "image/png8", "image/png; mode=8bit", "image/png24",
+                "image/png; mode=24bit", "image/png;%20mode=24bit") {
+            public ImageWriteParam prepareParameters(ImageWriter writer, String compression,
+                    boolean compressUsed, float compressionRate) {
+                ImageWriteParam params = null;
+
+                if (writer instanceof CLibImageWriter) {
+                    params = writer.getDefaultWriteParam();
+                    // Define compression mode
+                    params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                    if (compressUsed) {
+                        // best compression
+                        params.setCompressionType(compression);
+                    }
+                    if (compressionRate > -1) {
+                        // we can control quality here
+                        params.setCompressionQuality(compressionRate);
+                    }
+                } else if (writer instanceof PNGImageWriter) {
+                    params = new PNGImageWriteParam();
+                    // Define compression mode
+                    params.setCompressionMode(ImageWriteParam.MODE_DEFAULT);
+                }
+                return params;
+            }
+
+            public RenderedImage prepareImage(RenderedImage image, MimeType type) {
+                boolean isPNG8 = type == ImageMime.png8;
+                if (isPNG8) {
+                    return applyPalette(image);
+                }
+                return image;
+            }
+        },
+        JPEG("image/jpeg") {
+            protected ImageWriteParam prepareParameters(ImageWriter writer, String compression,
+                    boolean compressUsed, float compressionRate) {
+                ImageWriteParam params = writer.getDefaultWriteParam();
+                params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                if (compressUsed) {
+                    // Lossy compression.
+                    params.setCompressionType(compression);
+                }
+                if (compressionRate > -1) {
+                    // we can control quality here
+                    params.setCompressionQuality(compressionRate);
+                }
+                // If JPEGWriteParams, additional parameters are set
+                if (params instanceof JPEGImageWriteParam) {
+                    final JPEGImageWriteParam jpegParams = (JPEGImageWriteParam) params;
+                    jpegParams.setOptimizeHuffmanTables(true);
+                    try {
+                        jpegParams.setProgressiveMode(JPEGImageWriteParam.MODE_DEFAULT);
+                    } catch (UnsupportedOperationException e) {
+                        // Logged Exception
+                        LOGGER.error(e.getMessage(), e);
+                    }
+
+                    params = jpegParams;
+                }
+                return params;
+            }
+        },
+        GIF("image/gif"){
+            public RenderedImage prepareImage(RenderedImage image, MimeType type) {
+                return applyPalette(image);
+            }
+            
+        }, TIFF("image/tiff"), BMP("image/bmp");
 
         private String[] formatNames;
 
-        WriteParams(String... formatNames) {
+        WriteHelper(String... formatNames) {
             this.formatNames = formatNames;
+        }
+
+        public ImageWriteParam prepareParams(Map<String, String> inputParams, ImageWriter writer) {
+            // Selection of the compression type
+            String compression = inputParams.get("COMPRESSION");
+            // Boolean indicating if compression is present
+            boolean compressUsed = compression != null && !compression.isEmpty()
+                    && !compression.equalsIgnoreCase("null");
+            // Selection of the compression rate
+            String compressionRateValue = inputParams.get("COMPRESSION_RATE");
+            // Initial value for the compression rate
+            float compressionRate = -1;
+            // Evaluation of the compression rate
+            if (compressionRateValue != null) {
+                try {
+                    compressionRate = Float.parseFloat(compressionRateValue);
+                } catch (NumberFormatException e) {
+                    // Do nothing and skip compression rate
+                }
+            }
+            // Creation of the ImageWriteParams
+            ImageWriteParam params = prepareParameters(writer, compression, compressUsed,
+                    compressionRate);
+
+            return params;
+        }
+
+        protected ImageWriteParam prepareParameters(ImageWriter writer, String compression,
+                boolean compressUsed, float compressionRate) {
+            // Parameters creation
+            ImageWriteParam params = writer.getDefaultWriteParam();
+            params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            if (compressUsed) {
+                // best compression
+                params.setCompressionType(compression);
+            }
+            if (compressionRate > -1) {
+                // we can control quality here
+                params.setCompressionQuality(compressionRate);
+            }
+
+            return params;
+        }
+
+        public RenderedImage prepareImage(RenderedImage image, MimeType type) {
+            return image;
         }
 
         private boolean isFormatNameAccepted(String formatName) {
@@ -64,7 +203,7 @@ public class ImageEncoderImpl implements ImageEncoder {
             return accepted;
         }
 
-        public static WriteParams getWriteParamForName(String formatName) {
+        public static WriteHelper getWriteHelperForName(String formatName) {
 
             if (PNG.isFormatNameAccepted(formatName)) {
                 return PNG;
@@ -90,7 +229,7 @@ public class ImageEncoderImpl implements ImageEncoder {
      * @throws IOException
      */
     public void encode(RenderedImage image, Object destination,
-            boolean aggressiveOutputStreamOptimization, Map<String, ?> map) {
+            boolean aggressiveOutputStreamOptimization, MimeType type, Map<String, ?> map) {
 
         if (!isAgressiveOutputStreamSupported() && aggressiveOutputStreamOptimization) {
             throw new UnsupportedOperationException(OPERATION_NOT_SUPPORTED);
@@ -115,11 +254,16 @@ public class ImageEncoderImpl implements ImageEncoder {
                     }
 
                     // Preparation of the ImageWriteParams
-                    ImageWriteParam params = prepareParams(writer);
+                    ImageWriteParam params = null;
+                    RenderedImage finalImage = image;
+                    if (helper != null) {
+                        params = helper.prepareParams(inputParams, writer);
+                        finalImage = helper.prepareImage(image, type);
+                    }
 
                     // Image writing
                     writer.setOutput(stream);
-                    writer.write(null, new IIOImage(image, null, null), params);
+                    writer.write(null, new IIOImage(finalImage, null, null), params);
                 } else {
                     throw new IllegalArgumentException("Wrong output object");
                 }
@@ -141,97 +285,6 @@ public class ImageEncoderImpl implements ImageEncoder {
                 }
             }
         }
-    }
-
-    private ImageWriteParam prepareParams(ImageWriter writer) throws IOException {
-
-        String mimeType0 = supportedMimeTypes.get(0);
-
-        int beginIndex = 6;
-        WriteParams paramEnum = WriteParams.getWriteParamForName(mimeType0.substring(beginIndex));
-
-        ImageWriteParam params = null;
-        // Selection of the compression type
-        String compression = inputParams.get("COMPRESSION");
-        // Boolean indicating if compression is present
-        boolean compressUsed = compression != null && !compression.isEmpty()
-                && !compression.equalsIgnoreCase("null");
-        // Selection of the compression rate
-        String compressionRateValue = inputParams.get("COMPRESSION_RATE");
-        // Initial value for the compression rate
-        float compressionRate = -1;
-        // Evaluation of the compression rate
-        if (compressionRateValue != null) {
-            try {
-                compressionRate = Float.parseFloat(compressionRateValue);
-            } catch (NumberFormatException e) {
-                //Do nothing and skip compression rate
-            }
-        }
-
-        switch (paramEnum) {
-        case PNG:
-            if (writer instanceof CLibImageWriter) {
-                params = writer.getDefaultWriteParam();
-                // Define compression mode
-                params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                if (compressUsed) {
-                    // best compression
-                    params.setCompressionType(compression);
-                }
-                if (compressionRate > -1) {
-                    // we can control quality here
-                    params.setCompressionQuality(compressionRate);
-                }
-            } else if (writer instanceof PNGImageWriter) {
-                params = new PNGImageWriteParam();
-                // Define compression mode
-                params.setCompressionMode(ImageWriteParam.MODE_DEFAULT);
-            }
-            break;
-        case JPEG:
-            params = writer.getDefaultWriteParam();
-            params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-            if (compressUsed) {
-                // Lossy compression.
-                params.setCompressionType(compression);
-            }
-            if (compressionRate > -1) {
-                // we can control quality here
-                params.setCompressionQuality(compressionRate);
-            }
-            // If JPEGWriteParams, additional parameters are set
-            if (params instanceof JPEGImageWriteParam) {
-                final JPEGImageWriteParam jpegParams = (JPEGImageWriteParam) params;
-                jpegParams.setOptimizeHuffmanTables(true);
-                try {
-                    jpegParams.setProgressiveMode(JPEGImageWriteParam.MODE_DEFAULT);
-                } catch (UnsupportedOperationException e) {
-                    throw new IOException(e);
-                }
-
-                params = jpegParams;
-            }
-            break;
-        case GIF:
-        case TIFF:
-        case BMP:
-            params = writer.getDefaultWriteParam();
-            params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-            if (compressUsed) {
-                // best compression
-                params.setCompressionType(compression);
-            }
-            if (compressionRate > -1) {
-                // we can control quality here
-                params.setCompressionQuality(compressionRate);
-            }
-            break;
-        default:
-            break;
-        }
-
-        return params;
     }
 
     /**
@@ -291,5 +344,31 @@ public class ImageEncoderImpl implements ImageEncoder {
             }
 
         }
+
+        // Selection of the helper object associated to the following format
+        helper = WriteHelper.getWriteHelperForName(supportedMimeTypes.get(0));
+
+    }
+
+    protected WriteHelper getHelper() {
+        return helper;
+    }
+
+    private static RenderedImage applyPalette(RenderedImage canvas) {
+        if (!(canvas.getColorModel() instanceof IndexColorModel)) {
+            // try to force a RGBA setup
+            ImageWorker imageWorker = new ImageWorker(canvas);
+            RenderedImage image = imageWorker.rescaleToBytes().forceComponentColorModel()
+                    .getRenderedImage();
+            ColorIndexer indexer = new Quantizer(256).subsample().buildColorIndexer(image);
+
+            // if we have an indexer transform the image
+            if (indexer != null) {
+                image = ColorIndexerDescriptor.create(image, indexer, null);
+            }
+            return image;
+        }
+        return canvas;
+
     }
 }

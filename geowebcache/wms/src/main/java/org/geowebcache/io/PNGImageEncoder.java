@@ -1,3 +1,20 @@
+/**
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * @author Nicola Lagomarsini, GeoSolutions S.A.S., Copyright 2014
+ * 
+ */
 package org.geowebcache.io;
 
 import it.geosolutions.imageio.plugins.png.PNGWriter;
@@ -12,6 +29,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.geotools.image.ImageWorker;
 import org.geowebcache.mime.ImageMime;
+import org.geowebcache.mime.MimeType;
 
 import ar.com.hjg.pngj.FilterType;
 
@@ -59,7 +77,7 @@ public class PNGImageEncoder extends ImageEncoderImpl {
     }
 
     public void encode(RenderedImage image, Object destination,
-            boolean aggressiveOutputStreamOptimization, Map<String, ?> map) {
+            boolean aggressiveOutputStreamOptimization, MimeType type, Map<String, ?> map) {
 
         if (!isAgressiveOutputStreamSupported() && aggressiveOutputStreamOptimization) {
             throw new UnsupportedOperationException(OPERATION_NOT_SUPPORTED);
@@ -67,7 +85,7 @@ public class PNGImageEncoder extends ImageEncoderImpl {
 
         // If the new PNGWriter must be disabled then the other writers are used
         if (disablePNG) {
-            super.encode(image, destination, aggressiveOutputStreamOptimization, map);
+            super.encode(image, destination, aggressiveOutputStreamOptimization, type, map);
         } else {
             // Creation of the associated Writer
             PNGWriter writer = new PNGWriter();
@@ -92,8 +110,15 @@ public class PNGImageEncoder extends ImageEncoderImpl {
                         filter = (FilterType) filterObj;
                     }
                     stream = (OutputStream) destination;
+                    
+                    //Image preparation if an image helper is present
+                    WriteHelper helper = getHelper();
+                    RenderedImage finalImage = image;
+                    if(helper!=null){
+                        finalImage = helper.prepareImage(image, type);
+                    }                   
                     // Image writing
-                    writer.writePNG(image, stream, quality, filter);
+                    writer.writePNG(finalImage, stream, quality, filter);
                 } else {
                     throw new IllegalArgumentException(
                             "Only an OutputStream can be provided to the PNGEncoder");
