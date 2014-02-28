@@ -22,11 +22,13 @@
 		<property name="proxyRequests">
 			<value>TRUE</value>
 		</property>
-		<!-- Proxy unknown requests -->
 		<property name="hintsConfig">
 			<value>DEFAULT</value>
 		</property>
-	</bean>
+	 	<property name="utility" ref="wmsUtilities"/>
+  </bean>
+  
+  <bean id="wmsUtilities" class="org.geowebcache.service.wms.WMSUtilities">
 
 	<!--Encoders -->
 
@@ -80,7 +82,6 @@
 		</constructor-arg>
 		<constructor-arg>
 			<list>
-				<value>it.geosolutions.imageio.plugins.turbojpeg.TurboJpegImageWriterSpi</value>
 				<value>com.sun.media.imageioimpl.plugins.jpeg.CLibJPEGImageWriterSpi</value>
 				<value>com.sun.imageio.plugins.jpeg.JPEGImageWriterSpi</value>
 			</list>
@@ -176,7 +177,6 @@
 		</constructor-arg>
 		<constructor-arg>
 			<list>
-				<value>it.geosolutions.imageio.plugins.turbojpeg.TurboJpegImageReaderSpi</value>
 				<value>com.sun.media.imageioimpl.plugins.jpeg.CLibJPEGImageReaderSpi</value>
 				<value>com.sun.imageio.plugins.jpeg.JPEGImageReaderSpi</value>
 			</list>

@@ -33,20 +33,23 @@ import org.geowebcache.mime.MimeType;
 
 import ar.com.hjg.pngj.FilterType;
 
+/**
+ * Subclass of the {@link ImageEncoderImpl} class optimized for the PNG format. It uses a new PNGEncoder which provides better performances.
+ */
 public class PNGImageEncoder extends ImageEncoderImpl {
-
+    /** Filter type associated string*/
     private static final String FILTER_TYPE = "filterType";
-
+    /** Logger used*/
     private static final Logger LOGGER = Logger.getLogger(PNGImageEncoder.class);
-
+    /** Supported mime types*/
     private static List<String> supportedMimeTypes;
-
+    /** Boolean used for disabling the png encoding*/
     private boolean disablePNG;
-
+    /** Boolean indicating if the aggressive output stream is supported*/
     private final boolean isAggressiveSupported;
-
+    /** Default quality value*/
     private final static float DEFAULT_QUALITY = 1;
-
+    /** Quality value*/
     private final float quality;
 
     static {
@@ -71,15 +74,15 @@ public class PNGImageEncoder extends ImageEncoderImpl {
         this.isAggressiveSupported = (!this.disablePNG);
     }
 
-    public boolean isAgressiveOutputStreamSupported() {
+    public boolean isAggressiveOutputStreamSupported() {
         // If Default PNG Writer must not be used, then Aggressive OutputStream is not supported.
-        return super.isAgressiveOutputStreamSupported() && isAggressiveSupported;
+        return super.isAggressiveOutputStreamSupported() && isAggressiveSupported;
     }
 
     public void encode(RenderedImage image, Object destination,
-            boolean aggressiveOutputStreamOptimization, MimeType type, Map<String, ?> map) {
+            boolean aggressiveOutputStreamOptimization, MimeType type, Map<String, ?> map) throws Exception {
 
-        if (!isAgressiveOutputStreamSupported() && aggressiveOutputStreamOptimization) {
+        if (!isAggressiveOutputStreamSupported() && aggressiveOutputStreamOptimization) {
             throw new UnsupportedOperationException(OPERATION_NOT_SUPPORTED);
         }
 
@@ -125,6 +128,7 @@ public class PNGImageEncoder extends ImageEncoderImpl {
                 }
             } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
+                throw e;
             } finally {
                 // Writer disposal
                 if (writer != null) {
@@ -142,11 +146,16 @@ public class PNGImageEncoder extends ImageEncoderImpl {
             }
         }
     }
-
+    /**
+     * Boolean indicating if the new PNG encoder is disabled
+     */
     public boolean isDisablePNG() {
         return disablePNG;
     }
 
+    /**
+     * Disable/Enable PNG encoding
+     */
     public void setDisablePNG(boolean disablePNG) {
         this.disablePNG = disablePNG;
     }

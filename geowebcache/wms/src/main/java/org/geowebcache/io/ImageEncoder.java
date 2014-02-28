@@ -23,13 +23,32 @@ import java.util.Map;
 
 import org.geowebcache.mime.MimeType;
 
+/**
+ * Interface for each encoder object. Each class implementing this interface can be added to the spring application context as a bean and then will be 
+ * automatically included in the class {@link ImageEncoderContainer}. 
+ */
 public interface ImageEncoder {
 
+    /**
+     * Encodes the selected image
+     * 
+     * @param image
+     * @param destination
+     * @param aggressiveOutputStreamOptimization
+     * @param type
+     * @param option
+     */
     public void encode(RenderedImage image, Object destination,
-            boolean aggressiveOutputStreamOptimization, MimeType type, Map<String,?> option);
+            boolean aggressiveOutputStreamOptimization, MimeType type, Map<String,?> option) throws Exception;
     
+    /**
+     * Returns the list of the supported mimetypes
+     */
     public List<String> getSupportedMimeTypes();
     
-    public boolean isAgressiveOutputStreamSupported();
+    /**
+     * Indicates if Aggressive outputStream is supported
+     */
+    public boolean isAggressiveOutputStreamSupported();
     
 }

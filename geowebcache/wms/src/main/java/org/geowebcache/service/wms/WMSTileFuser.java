@@ -465,7 +465,7 @@ public class WMSTileFuser{
     }
 
     protected void renderCanvas() throws OutsideCoverageException, GeoWebCacheException,
-            IOException {        
+            IOException,Exception {        
         
         // Now we loop over all the relevant tiles and write them to the canvas,
         // Starting at the bottom, moving to the right and up
@@ -603,7 +603,7 @@ public class WMSTileFuser{
     }
 
     protected void writeResponse(HttpServletResponse response, RuntimeStats stats)
-            throws IOException, OutsideCoverageException, GeoWebCacheException {
+            throws IOException, OutsideCoverageException, GeoWebCacheException,Exception {
         determineSourceResolution();
         determineCanvasLayout();
         createCanvas();

@@ -123,7 +123,7 @@ public class WMSTileFuserTest extends TestCase {
         tileFuser.determineCanvasLayout();
     }
 
-    public void testWriteResponse() throws OutsideCoverageException, IOException, GeoWebCacheException, URISyntaxException {
+    public void testWriteResponse() throws Exception {
     	final TileLayer layer = createWMSLayer();
     	// request larger than -30.0,15.0,45.0,30
         BoundingBox bounds = new BoundingBox(-35.0,14.0,55.0,39);

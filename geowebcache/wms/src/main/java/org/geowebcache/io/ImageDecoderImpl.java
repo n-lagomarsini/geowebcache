@@ -35,18 +35,27 @@ import javax.imageio.stream.MemoryCacheImageInputStream;
 
 import org.apache.log4j.Logger;
 
+/**
+ * Class implementing the ImageDecoder interface, the user should only create a new bean for instantiating a new decoder object.
+ */
 public class ImageDecoderImpl implements ImageDecoder{
-    
+    /**
+     * Logger used
+     */
     private static final Logger LOGGER = Logger.getLogger(ImageEncoderImpl.class);
-
+    /**
+     * Registry used for selecting the ImageReaderSpi instances
+     */
     private static final IIORegistry theRegistry = IIORegistry.getDefaultInstance();
-
+    /**
+     * Default string used for exceptions
+     */
     public static final String OPERATION_NOT_SUPPORTED = "Operation not supported";
-
+    /**Boolean indicating is aggressive inputstream is supported*/
     private final boolean isAggressiveInputStreamSupported;
-
+    /**Supported Mimetypes*/
     private final List<String> supportedMimeTypes;
-
+    /**ImageReaderSpi object used*/
     private ImageReaderSpi spi;
 
     /**
@@ -90,9 +99,9 @@ public class ImageDecoderImpl implements ImageDecoder{
      * @throws IOException
      */
     public BufferedImage decode(Object source,
-            boolean aggressiveInputStreamOptimization, Map<String,Object> map) {
+            boolean aggressiveInputStreamOptimization, Map<String,Object> map)  throws Exception{
 
-        if (!isAgressiveInputStreamSupported() && aggressiveInputStreamOptimization) {
+        if (!isAggressiveInputStreamSupported() && aggressiveInputStreamOptimization) {
             throw new UnsupportedOperationException(OPERATION_NOT_SUPPORTED);
         }
 
@@ -119,7 +128,7 @@ public class ImageDecoderImpl implements ImageDecoder{
                 // Check if the input object is an InputStream
                 if (source instanceof InputStream) {
                     // Use of the ImageInputStreamAdapter
-                    if (isAgressiveInputStreamSupported()) {
+                    if (isAggressiveInputStreamSupported()) {
                         stream = new ImageInputStreamAdapter((InputStream) source);
                     } else {
                         stream = new MemoryCacheImageInputStream((InputStream) source);
@@ -133,6 +142,7 @@ public class ImageDecoderImpl implements ImageDecoder{
                 }
             } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
+                throw e;
             } finally {
                 // reader disposal
                 if (reader != null) {
@@ -175,7 +185,7 @@ public class ImageDecoderImpl implements ImageDecoder{
      * 
      * @return isAggressiveInputStreamSupported Boolean indicating if the selected decoder supports an aggressive input stream optimization
      */
-    public boolean isAgressiveInputStreamSupported() {
+    public boolean isAggressiveInputStreamSupported() {
         return isAggressiveInputStreamSupported;
     }
     

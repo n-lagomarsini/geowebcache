@@ -28,17 +28,25 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
+/**
+ * Class  used for containing all the ImageDecoder implementations in a map. The user should only call the decode()
+ * method and internally it uses the reader associated to the input mimetype.
+ */
 public class ImageDecoderContainer implements ApplicationContextAware {
-
+    /**
+     * Collection of all the ImageDecoder interface implementation
+     */
     private Collection<ImageDecoder> decoders;
-
+    /**
+     * Map of all the decoders for mimetype
+     */
     private Map<String, ImageDecoder> mapDecoders;
 
     public ImageDecoderContainer() {
     }
 
     public BufferedImage decode(String mimeType, Object input,
-            boolean aggressiveInputStreamOptimization, Map<String, Object> map) throws IOException {
+            boolean aggressiveInputStreamOptimization, Map<String, Object> map) throws Exception {
         if (mapDecoders == null) {
             throw new IllegalArgumentException("ApplicationContext must be set before decoding");
         }
@@ -50,7 +58,7 @@ public class ImageDecoderContainer implements ApplicationContextAware {
             throw new IllegalArgumentException(
                     "ApplicationContext must be set before checking the AggressiveInputStrean support");
         }
-        return mapDecoders.get(mimeType).isAgressiveInputStreamSupported();
+        return mapDecoders.get(mimeType).isAggressiveInputStreamSupported();
     }
 
     public void setApplicationContext(ApplicationContext context) throws BeansException {

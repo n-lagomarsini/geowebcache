@@ -48,22 +48,32 @@ import org.geowebcache.mime.MimeType;
 import com.sun.imageio.plugins.png.PNGImageWriter;
 import com.sun.media.imageioimpl.plugins.clib.CLibImageWriter;
 
+/**
+ * Class implementing the ImageEncoder interface, the user should only create a new bean for instantiating a new encoder object.
+ */
 public class ImageEncoderImpl implements ImageEncoder {
 
+    /**
+     * Logger used
+     */
     private static final Logger LOGGER = Logger.getLogger(ImageEncoderImpl.class);
-
+    /**
+     * Registry used for selecting the ImageReaderSpi instances
+     */
     private static final IIORegistry theRegistry = IIORegistry.getDefaultInstance();
-
+    /**
+     * Default string used for exceptions
+     */
     public static final String OPERATION_NOT_SUPPORTED = "Operation not supported";
-
+    /**Boolean indicating is aggressive outputstream is supported*/
     private final boolean isAggressiveOutputStreamSupported;
-
+    /**Supported Mimetypes*/
     private final List<String> supportedMimeTypes;
-
+    /**ImageReaderSpi object used*/
     private ImageWriterSpi spi;
-
+    /** Map containing the input parameters used by the WriteHelper object*/
     private Map<String, String> inputParams;
-
+    /**Helper object used for preparing Image and ImageWriteParam for writing the image*/
     private WriteHelper helper;
 
     /**
@@ -229,9 +239,9 @@ public class ImageEncoderImpl implements ImageEncoder {
      * @throws IOException
      */
     public void encode(RenderedImage image, Object destination,
-            boolean aggressiveOutputStreamOptimization, MimeType type, Map<String, ?> map) {
+            boolean aggressiveOutputStreamOptimization, MimeType type, Map<String, ?> map)  throws Exception{
 
-        if (!isAgressiveOutputStreamSupported() && aggressiveOutputStreamOptimization) {
+        if (!isAggressiveOutputStreamSupported() && aggressiveOutputStreamOptimization) {
             throw new UnsupportedOperationException(OPERATION_NOT_SUPPORTED);
         }
 
@@ -247,7 +257,7 @@ public class ImageEncoderImpl implements ImageEncoder {
                 // Check if the input object is an OutputStream
                 if (destination instanceof OutputStream) {
                     // Use of the ImageOutputStreamAdapter
-                    if (isAgressiveOutputStreamSupported()) {
+                    if (isAggressiveOutputStreamSupported()) {
                         stream = new ImageOutputStreamAdapter((OutputStream) destination);
                     } else {
                         stream = new MemoryCacheImageOutputStream((OutputStream) destination);
@@ -267,8 +277,9 @@ public class ImageEncoderImpl implements ImageEncoder {
                 } else {
                     throw new IllegalArgumentException("Wrong output object");
                 }
-            } catch (Exception e) {
+            } catch (Exception e) {                
                 LOGGER.error(e.getMessage(), e);
+                throw e;
             } finally {
                 // Writer disposal
                 if (writer != null) {
@@ -310,7 +321,7 @@ public class ImageEncoderImpl implements ImageEncoder {
      * 
      * @return isAggressiveOutputStreamSupported Boolean indicating if the selected encoder supports an aggressive output stream optimization
      */
-    public boolean isAgressiveOutputStreamSupported() {
+    public boolean isAggressiveOutputStreamSupported() {
         return isAggressiveOutputStreamSupported;
     }
 
@@ -350,6 +361,9 @@ public class ImageEncoderImpl implements ImageEncoder {
 
     }
 
+    /**
+     * Returns the WriteHelper object used
+     */
     protected WriteHelper getHelper() {
         return helper;
     }

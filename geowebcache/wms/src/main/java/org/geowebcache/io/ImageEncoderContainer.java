@@ -29,17 +29,25 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
+/**
+ * Class  used for containing all the ImageEncoder implementations in a map. The user should only call the encode()
+ * method and internally it uses the writer associated to the input mimetype.
+ */
 public class ImageEncoderContainer implements ApplicationContextAware {
-
+    /**
+     * Collection of all the ImageEncoder interface implementation
+     */
     private Collection<ImageEncoder> encoders;
-
+    /**
+     * Map of all the encoders for mimetype
+     */
     private Map<String, ImageEncoder> mapEncoders;
 
     public ImageEncoderContainer() {
     }
 
     public void encode(RenderedImage image, MimeType mimeType, Object destination,
-            boolean aggressiveOutputStreamOptimization, Map<String, Object> map) throws IOException {
+            boolean aggressiveOutputStreamOptimization, Map<String, Object> map) throws Exception {
         if (mapEncoders == null) {
             throw new IllegalArgumentException("ApplicationContext must be set before encoding");
         }
@@ -52,7 +60,7 @@ public class ImageEncoderContainer implements ApplicationContextAware {
             throw new IllegalArgumentException(
                     "ApplicationContext must be set before checking the AggressiveOutputStrean support");
         }
-        return mapEncoders.get(mimeType).isAgressiveOutputStreamSupported();
+        return mapEncoders.get(mimeType).isAggressiveOutputStreamSupported();
     }
 
     public void setApplicationContext(ApplicationContext context) throws BeansException {
