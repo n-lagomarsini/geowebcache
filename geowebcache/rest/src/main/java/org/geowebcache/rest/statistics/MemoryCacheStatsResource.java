@@ -105,7 +105,6 @@ public class MemoryCacheStatsResource extends Resource {
             response.setStatus(Status.CLIENT_ERROR_NOT_FOUND,
                     "No statistics available for the current BlobStore: " + store.getClass());
         }
-
     }
 
     /**

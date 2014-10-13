@@ -14,7 +14,10 @@
  */
 package org.geowebcache.storage.blobstore.memory;
 
+import java.util.List;
+
 import org.geowebcache.storage.TileObject;
+import org.geowebcache.storage.blobstore.memory.CacheConfiguration.EvictionPolicy;
 
 /**
  * Interface providing access to a cache object. It must be used by the {@link MemoryBlobStore} class for caching {@link TileObject} instances. This
@@ -94,4 +97,11 @@ public interface CacheProvider {
      * @return true if the Layer should not be cached
      */
     public boolean containsUncachedLayer(String layername);
+    
+    /**
+     * Returns a list of the supported {@link EvictionPolicy} of the cache Provider
+     * 
+     * @return a list containing the supported eviction policy
+     */
+    public List<EvictionPolicy> getSupportedPolicies();
 }

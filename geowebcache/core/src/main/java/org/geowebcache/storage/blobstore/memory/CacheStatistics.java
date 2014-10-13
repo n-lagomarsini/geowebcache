@@ -45,6 +45,15 @@ public class CacheStatistics implements Serializable {
     /** Cache miss rate */
     private double missRate = 0;
 
+    /** Cache current memory occupation */
+    private double currentMemoryOccupation = 0;
+
+    /** Cache total size */
+    private long totalSize = 0;
+
+    /** Cache actual size */
+    private long actualSize = 0;
+
     public CacheStatistics() {
     }
 
@@ -56,6 +65,9 @@ public class CacheStatistics implements Serializable {
         this.setTotalCount(stats.getRequestCount());
         this.setHitRate(stats.getHitRate());
         this.setMissRate(stats.getMissRate());
+        this.setCurrentMemoryOccupation(stats.getCurrentMemoryOccupation());
+        this.setActualSize(stats.getActualSize());
+        this.setTotalSize(stats.getTotalSize());
     }
 
     /**
@@ -152,5 +164,53 @@ public class CacheStatistics implements Serializable {
      */
     public void setMissRate(double missRate) {
         this.missRate = missRate;
+    }
+
+    /**
+     * @return the cache current memory occupation
+     */
+    public double getCurrentMemoryOccupation() {
+        return currentMemoryOccupation;
+    }
+
+    /**
+     * Setter for cache memory occupation
+     * 
+     * @param currentMemoryOccupation
+     */
+    public void setCurrentMemoryOccupation(double currentMemoryOccupation) {
+        this.currentMemoryOccupation = currentMemoryOccupation;
+    }
+
+    /**
+     * @return the cache current total size
+     */
+    public long getTotalSize() {
+        return totalSize;
+    }
+
+    /**
+     * Setter for cache total size
+     * 
+     * @param totalSize
+     */
+    public void setTotalSize(long totalSize) {
+        this.totalSize = totalSize;
+    }
+
+    /**
+     * @return the cache current actual size
+     */
+    public long getActualSize() {
+        return actualSize;
+    }
+
+    /**
+     * Setter for cache actual size
+     * 
+     * @param actualSize
+     */
+    public void setActualSize(long actualSize) {
+        this.actualSize = actualSize;
     }
 }

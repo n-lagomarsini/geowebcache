@@ -85,6 +85,9 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the cacheProvider, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Removing layer: " + layerName + " from cache provider");
+            }
             // Remove from cacheProvider
             cacheProvider.removeLayer(layerName);
             // Remove the layer. Wait other scheduled tasks
@@ -92,6 +95,9 @@ public class MemoryBlobStore implements BlobStore {
                     BlobStoreAction.DELETE_LAYER, layerName));
             // Variable containing the execution result
             boolean executed = false;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Waiting scheduled Tasks");
+            }
             try {
                 // Waiting tasks
                 executed = future.get();
@@ -102,6 +108,13 @@ public class MemoryBlobStore implements BlobStore {
             } catch (ExecutionException e) {
                 if (LOG.isErrorEnabled()) {
                     LOG.error(e.getMessage(), e);
+                }
+            }
+            if (LOG.isDebugEnabled()) {
+                if (executed) {
+                    LOG.debug("Delete Layer Task executed");
+                } else {
+                    LOG.debug("Delete LayerTask failed");
                 }
             }
             // Returns the result
@@ -116,8 +129,14 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the cacheProvider, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Removing Layer: " + layerName);
+            }
             // Remove the layer from the cacheProvider
             cacheProvider.removeLayer(layerName);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Scheduling GridSet: " + gridSetId + " removal for Layer: " + layerName);
+            }
             // Remove selected gridsets
             executorService.submit(new BlobStoreTask(store, BlobStoreAction.DELETE_GRIDSET,
                     layerName, gridSetId));
@@ -132,9 +151,15 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the cacheProvider, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Removing TileObject: " + obj);
+            }
             // Remove from cacheProvider
             cacheProvider.removeTileObj(obj);
             // Remove selected TileObject
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Scheduling removal of TileObject: " + obj);
+            }
             executorService.submit(new BlobStoreTask(store, BlobStoreAction.DELETE_SINGLE, obj));
             return true;
         } finally {
@@ -147,8 +172,19 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the cacheProvider, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Removing TileObjects for Layer: " + obj.getLayerName()
+                        + ", min/max levels: " + "[" + obj.getZoomStart() + ", " + obj.getZoomStop()
+                        + "], Gridset: " + obj.getGridSetId());
+            }
             // flush the cacheProvider
             cacheProvider.clear();
+            // Remove selected TileObject
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Scheduling removal of TileObjects for Layer: " + obj.getLayerName()
+                        + ", min/max levels: " + "[" + obj.getZoomStart() + ", " + obj.getZoomStop()
+                        + "], Gridset: " + obj.getGridSetId());
+            }
             // Remove selected TileRange
             executorService.submit(new BlobStoreTask(store, BlobStoreAction.DELETE_RANGE, obj));
             return true;
@@ -162,9 +198,15 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the cacheProvider, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Checking if TileObject:" + obj + " is present");
+            }
             TileObject cached = cacheProvider.getTileObj(obj);
             boolean found = false;
             if (cached == null) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("TileObject:" + obj + " not found. Try to get it from the wrapped blobstore");
+                }
                 // Try if it can be found in the system. Wait other scheduled tasks
                 Future<Boolean> future = executorService.submit(new BlobStoreTask(store,
                         BlobStoreAction.GET, obj));
@@ -182,6 +224,9 @@ public class MemoryBlobStore implements BlobStore {
                 }
                 // If the file has been found, it is inserted in cacheProvider
                 if (found) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("TileObject:" + obj + " found. Put it in cache");
+                    }
                     // Get the Cached TileObject
                     cached = getByteResourceTile(obj);
                     // Put the file in Cache
@@ -193,6 +238,9 @@ public class MemoryBlobStore implements BlobStore {
             }
             // If found add its resource to the input TileObject
             if (found) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("TileObject:" + obj + " found, update the input TileObject");
+                }
                 Resource resource = cached.getBlob();
                 obj.setBlob(resource);
                 obj.setCreated(resource.getLastModified());
@@ -210,9 +258,18 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the cacheProvider, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Convert Input resource into a Byte Array");
+            }
             TileObject cached = getByteResourceTile(obj);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Adding TileObject: " + obj + " to cache");
+            }
             cacheProvider.putTileObj(cached);
             // Add selected TileObject. Wait other scheduled tasks
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Adding TileObject: " + obj + " to the wrapped blobstore");
+            }
             Future<Boolean> future = executorService.submit(new BlobStoreTask(store,
                     BlobStoreAction.PUT, obj));
             // Variable containing the execution result
@@ -237,6 +294,9 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the cacheProvider, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Flushing cache");
+            }
             // flush the cacheProvider
             cacheProvider.clear();
             // Remove all the files
@@ -251,9 +311,15 @@ public class MemoryBlobStore implements BlobStore {
         // WriteLock is used because we are changing the MemoryBlobStore state
         writeLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Reset cache");
+            }
             // flush the cacheProvider
             cacheProvider.reset();
             // Remove all the files
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Destroy wrapped store");
+            }
             Future<Boolean> future = executorService.submit(new BlobStoreTask(store,
                     BlobStoreAction.DESTROY, ""));
             // Variable containing the execution result
@@ -280,6 +346,9 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the store, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Adding a new Listener");
+            }
             // Add a new Listener
             store.addListener(listener);
         } finally {
@@ -292,6 +361,9 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the store, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Removing listener");
+            }
             // Remove a listener
             return store.removeListener(listener);
         } finally {
@@ -305,8 +377,14 @@ public class MemoryBlobStore implements BlobStore {
         readLock.lock();
         try {
             // flush the cacheProvider
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Flushing cache");
+            }
             cacheProvider.clear();
             // Rename the layer. Wait other scheduled tasks
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Executing Layer rename task");
+            }
             Future<Boolean> future = executorService.submit(new BlobStoreTask(store,
                     BlobStoreAction.RENAME, oldLayerName, newLayerName));
             // Variable containing the execution result
@@ -335,6 +413,9 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the store, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Getting metadata for Layer: " + layerName);
+            }
             // Get the Layer metadata
             return store.getLayerMetadata(layerName, key);
         } finally {
@@ -347,6 +428,9 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the store, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Adding metadata for Layer: " + layerName);
+            }
             // Add a new Layer Metadata
             store.putLayerMetadata(layerName, key, value);
         } finally {
@@ -361,6 +445,9 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are changing the internal state of the cacheProvider, not the MemoryBlobStore state
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Getting Cache Statistics");
+            }
             return cacheProvider.getStatistics();
         } finally {
             readLock.unlock();
@@ -376,6 +463,9 @@ public class MemoryBlobStore implements BlobStore {
         // WriteLock is used because we are changing the internal state of the MemoryBlobStore
         writeLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Setting the wrapped store");
+            }
             if (store == null) {
                 throw new NullPointerException("Input BlobStore cannot be null");
             }
@@ -392,6 +482,9 @@ public class MemoryBlobStore implements BlobStore {
         // ReadLock is used because we are only returning the Store
         readLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Returning the wrapped store");
+            }
             return store;
         } finally {
             readLock.unlock();
@@ -407,6 +500,9 @@ public class MemoryBlobStore implements BlobStore {
         // WriteLock is used because we are changing the internal state of the MemoryBlobStore
         writeLock.lock();
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Setting cache provided");
+            }
             if (cache == null) {
                 throw new IllegalArgumentException("Input BlobStore cannot be null");
             }
@@ -429,12 +525,18 @@ public class MemoryBlobStore implements BlobStore {
         final Resource finalBlob;
         // If it is a ByteArrayResource, the result is simply copied
         if (obj.getBlob() instanceof ByteArrayResource) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Resource is already a Byte Array, only a copy is needed");
+            }
             ByteArrayResource byteArrayResource = (ByteArrayResource) obj.getBlob();
             byte[] contents = byteArrayResource.getContents();
             byte[] copy = new byte[contents.length];
             System.arraycopy(contents, 0, copy, 0, contents.length);
             finalBlob = new ByteArrayResource(copy);
         } else {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Resource is not a Byte Array, data must be transferred");
+            }
             // Else the result is written to a new WritableByteChannel
             final ByteArrayOutputStream bOut = new ByteArrayOutputStream();
             WritableByteChannel wChannel = Channels.newChannel(bOut);

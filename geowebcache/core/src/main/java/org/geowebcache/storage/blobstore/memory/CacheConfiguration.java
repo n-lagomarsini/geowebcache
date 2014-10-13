@@ -48,7 +48,7 @@ public class CacheConfiguration implements Serializable {
     public static final long DEFAULT_EVICTION_TIME = 2*60; //2 minutes
     
     /** Default value for the eviction policy */
-    public static final EvictionPolicy DEFAULT_EVICTION_POLICY=EvictionPolicy.EXPIRE_AFTER_ACCESS;
+    public static final EvictionPolicy DEFAULT_EVICTION_POLICY=EvictionPolicy.NULL;
 
     /** Parameter associated to the Cache memory limit */
     private long hardMemoryLimit = DEFAULT_MEMORY_LIMIT;

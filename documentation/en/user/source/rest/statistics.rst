@@ -48,12 +48,15 @@ Sample response:
 .. code-block:: xml 
 
 	<gwcInMemoryCacheStatistics>
-	  <hitCount>0</hitCount>
-	  <missCount>0</missCount>
-	  <evictionCount>0</evictionCount>
-	  <totalCount>0</totalCount>
-	  <hitRate>100.0</hitRate>
-	  <missRate>0.0</missRate>
+		<hitCount>0</hitCount>
+		<missCount>0</missCount>
+		<evictionCount>0</evictionCount>
+		<totalCount>0</totalCount>
+		<hitRate>100.0</hitRate>
+		<missRate>0.0</missRate>
+		<currentMemoryOccupation>0.0</currentMemoryOccupation>
+		<totalSize>67108864</totalSize>
+		<actualSize>0</actualSize>
 	</gwcInMemoryCacheStatistics>
 
 Request in JSON:
@@ -66,4 +69,4 @@ Sample response:
 
 .. code-block:: xml 
 
-	{"gwcInMemoryCacheStatistics":{"missRate":0,"totalCount":0,"missCount":0,"hitCount":0,"evictionCount":0,"hitRate":100}}
+	{"gwcInMemoryCacheStatistics":{"missRate":0,"totalCount":0,"missCount":0,"hitCount":0,"actualSize":0,"evictionCount":0,"hitRate":100,"totalSize":67108864,"currentMemoryOccupation":0}}

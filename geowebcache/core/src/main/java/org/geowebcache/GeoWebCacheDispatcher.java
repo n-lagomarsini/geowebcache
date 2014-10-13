@@ -670,6 +670,10 @@ public class GeoWebCacheDispatcher extends AbstractController {
         long requestCount = statistics.getRequestCount();
         double hitRate = statistics.getHitRate();
         double missRate = statistics.getMissRate();
+        double currentMemory = statistics.getCurrentMemoryOccupation();
+        long byteToMb = 1024 * 1024;
+        double actualSize = ((long) (100 * (statistics.getActualSize() * 1.0d) / byteToMb)) / 100d;
+        double totalSize = ((long) (100 * (statistics.getTotalSize() * 1.0d) / byteToMb)) / 100d;
 
         // Append the HTML with the statistics to a new StringBuilder
         StringBuilder str = new StringBuilder();
@@ -704,6 +708,18 @@ public class GeoWebCacheDispatcher extends AbstractController {
 
         str.append("<tr><td colspan=\"2\">Total number of evicted tiles:</td><td colspan=\"3\">"
                 + evictionCount);
+        str.append("</td></tr>\n");
+
+        str.append("<tr><td colspan=\"5\"> </td></tr>");
+        
+        str.append("<tr><td colspan=\"2\">Cache Memory occupation:</td><td colspan=\"3\">"
+                + currentMemory + " %");
+        str.append("</td></tr>\n");
+
+        str.append("<tr><td colspan=\"5\"> </td></tr>");
+        
+        str.append("<tr><td colspan=\"2\">Cache Actual Size/ Total Size :</td><td colspan=\"3\">"
+                + actualSize + " / " + totalSize + " Mb");
         str.append("</td></tr>\n");
 
         str.append("<tr><td colspan=\"5\"> </td></tr>");
