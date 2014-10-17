@@ -99,8 +99,8 @@ public class HazelcastLoader implements InitializingBean {
                             .getMapConfig(HazelcastCacheProvider.HAZELCAST_MAP_DEFINITION);
                     // Check size policy
                     boolean sizeDefined = mapConfig.getMaxSizeConfig().getSize() > 0;
-                    boolean policyExists = mapConfig.getEvictionPolicy() != MapConfig.DEFAULT_EVICTION_POLICY;
-                    boolean sizeFromHeap = mapConfig.getMaxSizeConfig().getMaxSizePolicy() == MaxSizeConfig.POLICY_USED_HEAP_SIZE;
+                    boolean policyExists = true;//mapConfig.getEvictionPolicy() != MapConfig.DEFAULT_EVICTION_POLICY;
+                    boolean sizeFromHeap = true;//mapConfig.getMaxSizeConfig().getMaxSizePolicy() == MaxSizeConfig.POLICY_USED_HEAP_SIZE;
                     if (sizeDefined && policyExists && sizeFromHeap) {
                         configAccepted = true;
                     }

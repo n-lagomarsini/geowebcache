@@ -1,6 +1,7 @@
 package org.geowebcache.storage.blobstore.memory.distributed;
 
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.geowebcache.storage.TileObject;
@@ -10,7 +11,11 @@ import org.geowebcache.storage.blobstore.memory.CacheProvider;
 import org.geowebcache.storage.blobstore.memory.CacheStatistics;
 import org.geowebcache.storage.blobstore.memory.guava.GuavaCacheProvider;
 
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.HazelcastInstanceAware;
 import com.hazelcast.core.IMap;
+import com.hazelcast.map.EntryBackupProcessor;
+import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.monitor.LocalMapStats;
 import com.hazelcast.query.EntryObject;
 import com.hazelcast.query.Predicate;
@@ -20,7 +25,7 @@ import com.hazelcast.query.SqlPredicate;
 public class HazelcastCacheProvider implements CacheProvider {
 
     public static final String HAZELCAST_MAP_DEFINITION = "CacheProviderMap";
-    
+
     public static final long MB_TO_BYTES = 1048576;
 
     private static final String HAZELCAST_NAME = "Hazelcast Cache";
@@ -35,7 +40,9 @@ public class HazelcastCacheProvider implements CacheProvider {
         configured = loader.isConfigured();
         if (configured) {
             map = loader.getInstance().getMap(HAZELCAST_MAP_DEFINITION);
-            totalSize = loader.getInstance().getConfig().getMapConfig(HAZELCAST_MAP_DEFINITION).getMaxSizeConfig().getSize() * MB_TO_BYTES;
+            totalSize = loader.getInstance().getConfig().getMapConfig(HAZELCAST_MAP_DEFINITION)
+                    .getMaxSizeConfig().getSize()
+                    * MB_TO_BYTES;
         } else {
             map = null;
             totalSize = 0;
@@ -44,17 +51,17 @@ public class HazelcastCacheProvider implements CacheProvider {
 
     @Override
     public TileObject getTileObj(TileObject obj) {
-        if(configured){
+        if (configured) {
             String key = GuavaCacheProvider.generateTileKey(obj);
             return map.get(key);
-        }else{
+        } else {
             return null;
         }
     }
 
     @Override
     public void putTileObj(TileObject obj) {
-        if(configured){
+        if (configured) {
             String key = GuavaCacheProvider.generateTileKey(obj);
             map.put(key, obj);
         }
@@ -62,7 +69,7 @@ public class HazelcastCacheProvider implements CacheProvider {
 
     @Override
     public void removeTileObj(TileObject obj) {
-        if(configured){
+        if (configured) {
             String key = GuavaCacheProvider.generateTileKey(obj);
             map.remove(key);
         }
@@ -70,34 +77,43 @@ public class HazelcastCacheProvider implements CacheProvider {
 
     @Override
     public void removeLayer(String layername) {
-//        if(configured){
-//            EntryObject e = new PredicateBuilder().getEntryObject();
-//            Predicate predicate = e.get("layer_name").equal(layername);
-//            Set<TileObject> objs = (Set<TileObject>)map.values(predicate );
-//            for(TileObject obj : objs){
-//                String key = GuavaCacheProvider.generateTileKey(obj);
-//                map.remove(key);
-//            }
-//        }
+        if (configured) {
+            EntryObject e = new PredicateBuilder().getEntryObject();
+            Predicate predicate = e.get("layer_name").equal(layername);
+            EntryProcessor entryProcessor = new CacheEntryProcessor();
+            map.executeOnEntries(entryProcessor, predicate);
+            // map.e
+
+            // map.e
+        }
+        // if(configured){
+        // EntryObject e = new PredicateBuilder().getEntryObject();
+        // Predicate predicate = e.get("layer_name").equal(layername);
+        // Set<TileObject> objs = (Set<TileObject>)map.values(predicate );
+        // for(TileObject obj : objs){
+        // String key = GuavaCacheProvider.generateTileKey(obj);
+        // map.remove(key);
+        // }
+        // }
     }
 
     @Override
     public void clear() {
-        if(configured){
+        if (configured) {
             map.clear();
         }
     }
 
     @Override
     public void reset() {
-        if(configured){
+        if (configured) {
             map.clear();
         }
     }
 
     @Override
     public CacheStatistics getStatistics() {
-        if(configured){
+        if (configured) {
             LocalMapStats localMapStats = map.getLocalMapStats();
             CacheStatistics stats = new HazelcastCacheStatistics(localMapStats, totalSize);
             return stats;
@@ -142,19 +158,19 @@ public class HazelcastCacheProvider implements CacheProvider {
         return HAZELCAST_NAME;
     }
 
-    static class HazelcastCacheStatistics extends CacheStatistics{
+    static class HazelcastCacheStatistics extends CacheStatistics {
 
         public HazelcastCacheStatistics(LocalMapStats localMapStats, long totalSize) {
             long hits = localMapStats.getHits();
             setHitCount(hits);
-            long total = localMapStats.getOperationStats().getNumberOfGets();
+            long total = localMapStats.getGetOperationCount();
             long miss = total - hits;
             setMissCount(miss);
             setTotalCount(total);
-            double hitRate = ((int)(100 * ((1.0d * hits)/total)))/100d;
-            double missRate = ((int)(100 * ((1.0d * miss)/total)))/100d;
+            double hitRate = ((int) (100 * ((1.0d * hits) / total))) / 100d;
+            double missRate = ((int) (100 * ((1.0d * miss) / total))) / 100d;
             setHitRate(hitRate);
-            setMissRate(missRate);            
+            setMissRate(missRate);
             setTotalSize(totalSize);
             long actualSize = localMapStats.getOwnedEntryMemoryCost();
             setActualSize(actualSize);
@@ -163,7 +179,23 @@ public class HazelcastCacheProvider implements CacheProvider {
                 currentMemoryOccupation = 0;
             }
             setCurrentMemoryOccupation(currentMemoryOccupation);
-            setEvictionCount(localMapStats.getMarkedAsRemovedEntryCount());
+
+            setEvictionCount(-1);
+        }
+    }
+
+    static class CacheEntryProcessor implements EntryProcessor<String, TileObject> {
+
+        @Override
+        public Object process(Entry<String, TileObject> entry) {
+            entry.setValue(null);
+            return null;
+
+        }
+
+        @Override
+        public EntryBackupProcessor<String, TileObject> getBackupProcessor() {
+            return null;
         }
     }
 }
