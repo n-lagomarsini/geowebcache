@@ -64,6 +64,8 @@ public class GuavaCacheProvider implements CacheProvider {
 
     /** Size of the scheduled thread pool */
     public static final int CORE_POOL_SIZE = 1;
+    
+    private static final String GUAVA_NAME = "Guava Cache";
 
     /** Array containing the supported Policies */
     public final static List<EvictionPolicy> POLICIES = Collections.unmodifiableList(Arrays.asList(
@@ -230,6 +232,11 @@ public class GuavaCacheProvider implements CacheProvider {
 
         // Update the configured parameter
         configured.getAndSet(true);
+    }
+
+    @Override
+    public boolean isImmutable() {
+        return false;
     }
 
     @Override
@@ -494,6 +501,11 @@ public class GuavaCacheProvider implements CacheProvider {
     }
 
     @Override
+    public String getName() {
+        return GUAVA_NAME;
+    }
+
+    @Override
     public void addUncachedLayer(String layername) {
         // Check if the cache has already been configured
         if (configured.get()) {
@@ -504,7 +516,7 @@ public class GuavaCacheProvider implements CacheProvider {
             actualOperations.incrementAndGet();
             try {
                 if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Adding Layer:" + layername + " to cache");
+                    LOGGER.debug("Adding Layer:" + layername + " to avoid cache");
                 }
                 // Adds the layer which should not be cached
                 layers.add(layername);
@@ -526,7 +538,7 @@ public class GuavaCacheProvider implements CacheProvider {
             actualOperations.incrementAndGet();
             try {
                 if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Removing Layer:" + layername + " to cache");
+                    LOGGER.debug("Removing Layer:" + layername + " to avoid cache");
                 }
                 // Configure a Layer for being cached again
                 layers.remove(layername);
@@ -548,7 +560,7 @@ public class GuavaCacheProvider implements CacheProvider {
             actualOperations.incrementAndGet();
             try {
                 if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Checking if Layer:" + layername + " is in cache");
+                    LOGGER.debug("Checking if Layer:" + layername + " must not be cached");
                 }
                 // Check if the layer must not be cached
                 return layers.contains(layername);
@@ -564,6 +576,11 @@ public class GuavaCacheProvider implements CacheProvider {
     @Override
     public List<EvictionPolicy> getSupportedPolicies() {
         return POLICIES;
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return true;
     }
 
     /**

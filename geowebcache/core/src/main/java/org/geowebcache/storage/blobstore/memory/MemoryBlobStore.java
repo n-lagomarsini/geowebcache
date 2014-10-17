@@ -37,6 +37,9 @@ import org.geowebcache.storage.StorageException;
 import org.geowebcache.storage.TileObject;
 import org.geowebcache.storage.TileRange;
 import org.geowebcache.storage.blobstore.memory.guava.GuavaCacheProvider;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
 /**
  * This class is an implementation of the {@link BlobStore} interface wrapping another {@link BlobStore} implementation and supporting in memory
@@ -44,7 +47,7 @@ import org.geowebcache.storage.blobstore.memory.guava.GuavaCacheProvider;
  * 
  * @author Nicola Lagomarsini Geosolutions
  */
-public class MemoryBlobStore implements BlobStore {
+public class MemoryBlobStore implements BlobStore, ApplicationContextAware {
 
     /** {@link Log} object used for logging exceptions */
     private final static Log LOG = LogFactory.getLog(MemoryBlobStore.class);
@@ -57,6 +60,9 @@ public class MemoryBlobStore implements BlobStore {
 
     /** Executor service used for scheduling cacheProvider store operations like put,delete,... */
     private final ExecutorService executorService;
+    
+    /** Optional name used for searching the bean related to the */
+    private String cacheBeanName;
 
     /** {@link ReentrantReadWriteLock} used for handling concurrency when accessing the cacheProvider */
     private final ReentrantReadWriteLock lock;
@@ -177,8 +183,8 @@ public class MemoryBlobStore implements BlobStore {
                         + ", min/max levels: " + "[" + obj.getZoomStart() + ", " + obj.getZoomStop()
                         + "], Gridset: " + obj.getGridSetId());
             }
-            // flush the cacheProvider
-            cacheProvider.clear();
+            // Remove layer for the cacheProvider
+            cacheProvider.removeLayer(obj.getLayerName());
             // Remove selected TileObject
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Scheduling removal of TileObjects for Layer: " + obj.getLayerName()
@@ -552,6 +558,66 @@ public class MemoryBlobStore implements BlobStore {
         TileObject cached = TileObject.createCompleteTileObject(obj.getLayerName(), obj.getXYZ(),
                 obj.getGridSetId(), obj.getBlobFormat(), obj.getParameters(), finalBlob);
         return cached;
+    }
+
+
+    public void setCacheBeanName(String cacheBeanName) {
+        this.cacheBeanName = cacheBeanName;
+    }    
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        String[] beans = applicationContext.getBeanNamesForType(CacheProvider.class);
+        int beanSize = beans.length;
+        boolean configured = false;
+        if (beanSize > 0) {
+            if (cacheBeanName != null && !cacheBeanName.isEmpty()) {
+                for (String beanDef : beans) {
+                    if (cacheBeanName.equalsIgnoreCase(beanDef)) {
+                        CacheProvider bean = applicationContext.getBean(beanDef,
+                                CacheProvider.class);
+                        if(bean.isAvailable()){
+                            setCacheProvider(bean);
+                            configured = true;
+                            break;  
+                        }
+                    }
+                }
+            } 
+            if (!configured && beanSize == 1) {
+                CacheProvider bean = applicationContext.getBean(beans[0], CacheProvider.class);
+                if(bean.isAvailable()){
+                    setCacheProvider(bean); 
+                    configured = true;
+                }
+            } 
+            if (!configured && beanSize == 2) {
+                for (String beanDef : beans) {
+                    CacheProvider bean = applicationContext.getBean(beanDef, CacheProvider.class);
+                    if (!(bean instanceof GuavaCacheProvider) && bean.isAvailable()) {
+                        setCacheProvider(bean);
+                        configured = true;
+                        break;
+                    }
+                }
+                // Try again and search if at least a GuavaCacheProvider is present
+                if(!configured){
+                    for (String beanDef : beans) {
+                        CacheProvider bean = applicationContext.getBean(beanDef, CacheProvider.class);
+                        if (bean.isAvailable()) {
+                            setCacheProvider(bean);
+                            configured = true;
+                            break;
+                        }
+                    }
+                }
+            } 
+            if(!configured) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("CacheProvider not configured, use default configuration");
+                }
+            }
+        }
     }
 
     /**

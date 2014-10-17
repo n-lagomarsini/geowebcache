@@ -97,11 +97,32 @@ public interface CacheProvider {
      * @return true if the Layer should not be cached
      */
     public boolean containsUncachedLayer(String layername);
-    
+
     /**
      * Returns a list of the supported {@link EvictionPolicy} of the cache Provider
      * 
      * @return a list containing the supported eviction policy
      */
     public List<EvictionPolicy> getSupportedPolicies();
+
+    /**
+     * Indicates if the CacheProvider configuration can be changed.
+     * 
+     * @return a boolean indicating if the cache configuration can be changed or not
+     */
+    public boolean isImmutable();
+
+    /**
+     * Indicates if this {@link CacheProvider} object can be used
+     * 
+     * @return a boolean indicating that the {@link CacheProvider} can be used for caching
+     */
+    public boolean isAvailable();
+    
+    /**
+     * Name of the {@link CacheProvider}
+     * 
+     * @return a String with the Cache Provider name
+     */
+    public String getName();
 }
