@@ -2,7 +2,7 @@ package org.geowebcache.storage.blobstore.memory.distributed;
 
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.geowebcache.storage.TileObject;
 import org.geowebcache.storage.blobstore.memory.CacheConfiguration;
@@ -11,8 +11,6 @@ import org.geowebcache.storage.blobstore.memory.CacheProvider;
 import org.geowebcache.storage.blobstore.memory.CacheStatistics;
 import org.geowebcache.storage.blobstore.memory.guava.GuavaCacheProvider;
 
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.HazelcastInstanceAware;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
@@ -20,7 +18,6 @@ import com.hazelcast.monitor.LocalMapStats;
 import com.hazelcast.query.EntryObject;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.PredicateBuilder;
-import com.hazelcast.query.SqlPredicate;
 
 public class HazelcastCacheProvider implements CacheProvider {
 
@@ -29,6 +26,10 @@ public class HazelcastCacheProvider implements CacheProvider {
     public static final long MB_TO_BYTES = 1048576;
 
     private static final String HAZELCAST_NAME = "Hazelcast Cache";
+    
+    private final AtomicLong totalOperations;
+    
+    //private final AtomicLong totalHits;
 
     private final IMap<String, TileObject> map;
 
@@ -43,9 +44,13 @@ public class HazelcastCacheProvider implements CacheProvider {
             totalSize = loader.getInstance().getConfig().getMapConfig(HAZELCAST_MAP_DEFINITION)
                     .getMaxSizeConfig().getSize()
                     * MB_TO_BYTES;
+            totalOperations = new AtomicLong(0);
+            //totalHits = new AtomicLong(0);
         } else {
             map = null;
             totalSize = 0;
+            totalOperations = null;
+            //totalHits = null;
         }
     }
 
@@ -80,27 +85,16 @@ public class HazelcastCacheProvider implements CacheProvider {
         if (configured) {
             EntryObject e = new PredicateBuilder().getEntryObject();
             Predicate predicate = e.get("layer_name").equal(layername);
-            EntryProcessor entryProcessor = new CacheEntryProcessor();
+            CacheEntryProcessor entryProcessor = new CacheEntryProcessor();
             map.executeOnEntries(entryProcessor, predicate);
-            // map.e
-
-            // map.e
         }
-        // if(configured){
-        // EntryObject e = new PredicateBuilder().getEntryObject();
-        // Predicate predicate = e.get("layer_name").equal(layername);
-        // Set<TileObject> objs = (Set<TileObject>)map.values(predicate );
-        // for(TileObject obj : objs){
-        // String key = GuavaCacheProvider.generateTileKey(obj);
-        // map.remove(key);
-        // }
-        // }
     }
 
     @Override
     public void clear() {
         if (configured) {
             map.clear();
+            totalOperations.getAndSet(map.getLocalMapStats().getGetOperationCount());
         }
     }
 
@@ -108,6 +102,7 @@ public class HazelcastCacheProvider implements CacheProvider {
     public void reset() {
         if (configured) {
             map.clear();
+            totalOperations.getAndSet(map.getLocalMapStats().getGetOperationCount());
         }
     }
 
@@ -115,7 +110,7 @@ public class HazelcastCacheProvider implements CacheProvider {
     public CacheStatistics getStatistics() {
         if (configured) {
             LocalMapStats localMapStats = map.getLocalMapStats();
-            CacheStatistics stats = new HazelcastCacheStatistics(localMapStats, totalSize);
+            CacheStatistics stats = new HazelcastCacheStatistics(localMapStats, totalSize, totalOperations.get());
             return stats;
         }
         return new CacheStatistics();
@@ -160,15 +155,15 @@ public class HazelcastCacheProvider implements CacheProvider {
 
     static class HazelcastCacheStatistics extends CacheStatistics {
 
-        public HazelcastCacheStatistics(LocalMapStats localMapStats, long totalSize) {
+        public HazelcastCacheStatistics(LocalMapStats localMapStats, long totalSize, long oldTotal) {
             long hits = localMapStats.getHits();
             setHitCount(hits);
-            long total = localMapStats.getGetOperationCount();
+            long total = localMapStats.getGetOperationCount() - oldTotal;
             long miss = total - hits;
             setMissCount(miss);
             setTotalCount(total);
-            double hitRate = ((int) (100 * ((1.0d * hits) / total))) / 100d;
-            double missRate = ((int) (100 * ((1.0d * miss) / total))) / 100d;
+            double hitRate = ((int) (100 * ((1.0d * hits) / total)));
+            double missRate = 100 - hitRate;
             setHitRate(hitRate);
             setMissRate(missRate);
             setTotalSize(totalSize);
