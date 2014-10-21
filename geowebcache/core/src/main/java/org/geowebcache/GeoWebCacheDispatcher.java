@@ -683,43 +683,43 @@ public class GeoWebCacheDispatcher extends AbstractController {
         str.append("<table border=\"0\" cellspacing=\"5\">");
 
         str.append("<tr><td colspan=\"2\">Total number of requests:</td><td colspan=\"3\">"
-                + requestCount);
+                +  (requestCount >= 0 ?  requestCount + "" : "Unavailable"));
         str.append("</td></tr>\n");
 
         str.append("<tr><td colspan=\"5\"> </td></tr>");
 
         str.append("<tr><td colspan=\"2\">Internal Cache hit count:</td><td colspan=\"3\">");
-        str.append(hitCount);
+        str.append(hitCount >= 0 ?  hitCount + "" : "Unavailable");
         str.append("</td></tr>\n");
 
         str.append("<tr><td colspan=\"2\">Internal Cache miss count:</td><td colspan=\"3\">");
-        str.append(missCount);
+        str.append(missCount >= 0 ?  missCount + "" : "Unavailable");
         str.append("</td></tr>\n");
 
         str.append("<tr><td colspan=\"2\">Internal Cache hit ratio:</td><td colspan=\"3\">");
-        str.append(hitRate + " %");
+        str.append(hitRate >= 0 ?  hitRate + " %" : "Unavailable");
         str.append("</td></tr>\n");
 
         str.append("<tr><td colspan=\"2\">Internal Cache miss ratio:</td><td colspan=\"3\">");
-        str.append(missRate + " %");
+        str.append(missRate >= 0 ?  missRate + " %" : "Unavailable");
         str.append("</td></tr>\n");
 
         str.append("<tr><td colspan=\"5\"> </td></tr>");
 
         str.append("<tr><td colspan=\"2\">Total number of evicted tiles:</td><td colspan=\"3\">"
-                + evictionCount);
+                + (evictionCount >= 0 ?  evictionCount + "" : "Unavailable"));
         str.append("</td></tr>\n");
 
         str.append("<tr><td colspan=\"5\"> </td></tr>");
         
         str.append("<tr><td colspan=\"2\">Cache Memory occupation:</td><td colspan=\"3\">"
-                + currentMemory + " %");
+                + (currentMemory >= 0 ?  currentMemory + " %" : "Unavailable"));
         str.append("</td></tr>\n");
 
         str.append("<tr><td colspan=\"5\"> </td></tr>");
         
         str.append("<tr><td colspan=\"2\">Cache Actual Size/ Total Size :</td><td colspan=\"3\">"
-                + actualSize + " / " + totalSize + " Mb");
+                + (totalSize >= 0 && actualSize >= 0?  actualSize + " / " + totalSize + " Mb" : "Unavailable") );
         str.append("</td></tr>\n");
 
         str.append("<tr><td colspan=\"5\"> </td></tr>");

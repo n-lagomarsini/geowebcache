@@ -94,7 +94,6 @@ public class HazelcastCacheProvider implements CacheProvider {
     public void clear() {
         if (configured) {
             map.clear();
-            totalOperations.getAndSet(map.getLocalMapStats().getGetOperationCount());
         }
     }
 
@@ -102,7 +101,6 @@ public class HazelcastCacheProvider implements CacheProvider {
     public void reset() {
         if (configured) {
             map.clear();
-            totalOperations.getAndSet(map.getLocalMapStats().getGetOperationCount());
         }
     }
 
@@ -158,12 +156,12 @@ public class HazelcastCacheProvider implements CacheProvider {
         public HazelcastCacheStatistics(LocalMapStats localMapStats, long totalSize, long oldTotal) {
             long hits = localMapStats.getHits();
             setHitCount(hits);
-            long total = localMapStats.getGetOperationCount() - oldTotal;
-            long miss = total - hits;
-            setMissCount(miss);
+            long total = localMapStats.getGetOperationCount(); //- oldTotal;
+            //long miss = total - hits;
+            setMissCount(-1);
             setTotalCount(total);
-            double hitRate = ((int) (100 * ((1.0d * hits) / total)));
-            double missRate = 100 - hitRate;
+            double hitRate = -1;//((int) (100 * ((1.0d * hits) / total)));
+            double missRate = -1;//100 - hitRate;
             setHitRate(hitRate);
             setMissRate(missRate);
             setTotalSize(totalSize);
