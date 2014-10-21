@@ -10,6 +10,7 @@ import org.geowebcache.storage.blobstore.memory.CacheConfiguration.EvictionPolic
 import org.geowebcache.storage.blobstore.memory.CacheProvider;
 import org.geowebcache.storage.blobstore.memory.CacheStatistics;
 import org.geowebcache.storage.blobstore.memory.guava.GuavaCacheProvider;
+import org.springframework.beans.factory.DisposableBean;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryBackupProcessor;
@@ -19,7 +20,7 @@ import com.hazelcast.query.EntryObject;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.PredicateBuilder;
 
-public class HazelcastCacheProvider implements CacheProvider {
+public class HazelcastCacheProvider implements CacheProvider, DisposableBean{
 
     public static final String HAZELCAST_MAP_DEFINITION = "CacheProviderMap";
 
@@ -101,6 +102,14 @@ public class HazelcastCacheProvider implements CacheProvider {
     public void reset() {
         if (configured) {
             map.clear();
+        }
+    }
+    
+
+    @Override
+    public void destroy() throws Exception {
+        if (configured) {
+            map.destroy();
         }
     }
 
