@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -63,6 +64,8 @@ public class MemoryBlobStore implements BlobStore, ApplicationContextAware {
     
     /** Optional name used for searching the bean related to the */
     private String cacheBeanName;
+    
+    private AtomicBoolean cacheAlreadySet;
 
     /** {@link ReentrantReadWriteLock} used for handling concurrency when accessing the cacheProvider */
     private final ReentrantReadWriteLock lock;
@@ -83,7 +86,8 @@ public class MemoryBlobStore implements BlobStore, ApplicationContextAware {
         setStore(new NullBlobStore());
         GuavaCacheProvider startingCache = new GuavaCacheProvider();
         startingCache.setConfiguration(new CacheConfiguration());
-        setCacheProvider(startingCache);
+        this.cacheProvider = startingCache;
+        cacheAlreadySet = new AtomicBoolean(false);
     }
 
     @Override
@@ -513,6 +517,7 @@ public class MemoryBlobStore implements BlobStore, ApplicationContextAware {
                 throw new IllegalArgumentException("Input BlobStore cannot be null");
             }
             this.cacheProvider = cache;
+            cacheAlreadySet.getAndSet(true);
         } finally {
             writeLock.unlock();
         }
@@ -560,62 +565,82 @@ public class MemoryBlobStore implements BlobStore, ApplicationContextAware {
         return cached;
     }
 
-
+    /**
+     * Setter for the Cache Provider name, note that this cannot be used in combination
+     * with the setCacheProvider method in the application Context initialization 
+     * 
+     * @param cacheBeanName
+     */
     public void setCacheBeanName(String cacheBeanName) {
-        this.cacheBeanName = cacheBeanName;
+        // WriteLock is used because we are changing the internal state of the MemoryBlobStore
+        writeLock.lock();
+        try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Setting cache providee name");
+            }
+            this.cacheBeanName = cacheBeanName;
+        } finally {
+            writeLock.unlock();
+        }
     }    
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        String[] beans = applicationContext.getBeanNamesForType(CacheProvider.class);
-        int beanSize = beans.length;
-        boolean configured = false;
-        if (beanSize > 0) {
-            if (cacheBeanName != null && !cacheBeanName.isEmpty()) {
-                for (String beanDef : beans) {
-                    if (cacheBeanName.equalsIgnoreCase(beanDef)) {
-                        CacheProvider bean = applicationContext.getBean(beanDef,
-                                CacheProvider.class);
-                        if(bean.isAvailable()){
-                            setCacheProvider(bean);
-                            configured = true;
-                            break;  
+        if(!cacheAlreadySet.get()){
+        	String[] beans = applicationContext.getBeanNamesForType(CacheProvider.class);
+            int beanSize = beans.length;
+            boolean configured = false;
+            if (beanSize > 0) {
+                if (cacheBeanName != null && !cacheBeanName.isEmpty()) {
+                    for (String beanDef : beans) {
+                        if (cacheBeanName.equalsIgnoreCase(beanDef)) {
+                            CacheProvider bean = applicationContext.getBean(beanDef,
+                                    CacheProvider.class);
+                            if(bean.isAvailable()){
+                                setCacheProvider(bean);
+                                configured = true;
+                                break;  
+                            }
                         }
                     }
-                }
-            } 
-            if (!configured && beanSize == 1) {
-                CacheProvider bean = applicationContext.getBean(beans[0], CacheProvider.class);
-                if(bean.isAvailable()){
-                    setCacheProvider(bean); 
-                    configured = true;
-                }
-            } 
-            if (!configured && beanSize == 2) {
-                for (String beanDef : beans) {
-                    CacheProvider bean = applicationContext.getBean(beanDef, CacheProvider.class);
-                    if (!(bean instanceof GuavaCacheProvider) && bean.isAvailable()) {
-                        setCacheProvider(bean);
+                } 
+                if (!configured && beanSize == 1) {
+                    CacheProvider bean = applicationContext.getBean(beans[0], CacheProvider.class);
+                    if(bean.isAvailable()){
+                        setCacheProvider(bean); 
                         configured = true;
-                        break;
                     }
-                }
-                // Try again and search if at least a GuavaCacheProvider is present
-                if(!configured){
+                } 
+                if (!configured && beanSize == 2) {
                     for (String beanDef : beans) {
                         CacheProvider bean = applicationContext.getBean(beanDef, CacheProvider.class);
-                        if (bean.isAvailable()) {
+                        if (!(bean instanceof GuavaCacheProvider) && bean.isAvailable()) {
                             setCacheProvider(bean);
                             configured = true;
                             break;
                         }
                     }
+                    // Try again and search if at least a GuavaCacheProvider is present
+                    if(!configured){
+                        for (String beanDef : beans) {
+                            CacheProvider bean = applicationContext.getBean(beanDef, CacheProvider.class);
+                            if (bean.isAvailable()) {
+                                setCacheProvider(bean);
+                                configured = true;
+                                break;
+                            }
+                        }
+                    }
+                } 
+                if(!configured) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("CacheProvider not configured, use default configuration");
+                    }
                 }
-            } 
-            if(!configured) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("CacheProvider not configured, use default configuration");
-                }
+            }
+        } else {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("CacheProvider already configured");
             }
         }
     }

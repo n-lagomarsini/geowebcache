@@ -195,6 +195,7 @@
   
   <bean id="gwcMemoryBlobStore" class="org.geowebcache.storage.blobstore.memory.MemoryBlobStore" destroy-method="destroy">
     <property name="store" ref="gwcBlobStore" />
+    <!--property name="cacheProvider" ref="guavaCacheProvider" /-->
     <!-- property name="cacheBeanName" value="guavaCacheProvider" /-->
   </bean>
   

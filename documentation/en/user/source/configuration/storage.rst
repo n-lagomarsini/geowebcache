@@ -69,9 +69,11 @@ An example of MemoryBlobStore configuration can be found here:
     <property name="store" ref="gwcBlobStore" />
 	<!-- "cacheProviderName" is optional. It is the name of the bean associated to the cacheProvider object used by this MemoryBlobStore-->
     <property name="cacheBeanName" value="cacheProviderName" /> 
+	<!-- "cacheProvider" is optional. It is the Reference to a CacheProvider bean in the application context. -->
+	<property name="cacheProvider" ref="ExampleCacheProvider" /> 
   </bean>  
 
-.. note:: Note that if the *cacheProviderName* has not been defined, the **MemoryBlobStore** will internally search for a suitable **CacheProvider**.
+.. note:: Note that *cacheProviderName*/*cacheProvider* cannote be used together, if a *cacheProvider* is defined, the *cacheProviderName* is not considered. If *cacheProviderName*/*cacheProvider* are not defined, the **MemoryBlobStore** will internally search for a suitable **CacheProvider**.
 
 CacheProvider configuration
 +++++++++++++++++++++++++++
