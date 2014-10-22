@@ -47,6 +47,11 @@
       <groupId>org.geowebcache</groupId>
       <artifactId>gwc-core</artifactId>
 	  <version>${project.version}</version>
-    </dependency>
+    </dependency>   
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>    
   </dependencies>
 </project>
