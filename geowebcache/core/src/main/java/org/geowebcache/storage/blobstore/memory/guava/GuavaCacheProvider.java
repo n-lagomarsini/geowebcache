@@ -17,6 +17,7 @@ package org.geowebcache.storage.blobstore.memory.guava;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -495,9 +496,20 @@ public class GuavaCacheProvider implements CacheProvider {
      * @return {@link TileObject} key
      */
     public static String generateTileKey(TileObject obj) {
-        return new StringBuilder(obj.getLayerName()).append(SEPARATOR).append(obj.getGridSetId())
+        Map<String, String> parameters = obj.getParameters();
+        
+        StringBuilder builder = new StringBuilder(obj.getLayerName()).append(SEPARATOR).append(obj.getGridSetId())
                 .append(SEPARATOR).append(Arrays.toString(obj.getXYZ())).append(SEPARATOR)
-                .append(obj.getBlobFormat()).toString();
+                .append(obj.getBlobFormat());
+        
+        // If parameters are present they must be handled
+        if(parameters != null && !parameters.isEmpty()){
+            for(String key : parameters.keySet()){
+                builder.append(SEPARATOR).append(key).append(SEPARATOR).append(parameters.get(key));
+            }
+        }
+        
+        return builder.toString();
     }
 
     @Override
