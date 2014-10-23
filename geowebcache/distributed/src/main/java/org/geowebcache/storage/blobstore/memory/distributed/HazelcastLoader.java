@@ -14,6 +14,7 @@ import org.springframework.beans.factory.InitializingBean;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MaxSizeConfig;
+import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -67,8 +68,7 @@ public class HazelcastLoader implements InitializingBean {
                     }
                 }
             }
-        } else if (!instance.getConfig().getMapConfigs()
-                .containsKey(HazelcastCacheProvider.HAZELCAST_MAP_DEFINITION)) {
+        } else if (!(new ConfigValidator(instance.getConfig()).isAccepted())) {
             instance = null;
         }
     }
@@ -101,7 +101,15 @@ public class HazelcastLoader implements InitializingBean {
                     boolean sizeDefined = mapConfig.getMaxSizeConfig().getSize() > 0;
                     boolean policyExists = mapConfig.getEvictionPolicy() != MapConfig.DEFAULT_EVICTION_POLICY;
                     boolean sizeFromHeap = mapConfig.getMaxSizeConfig().getMaxSizePolicy() == MaxSizeConfig.MaxSizePolicy.USED_HEAP_SIZE;
-                    if (sizeDefined && policyExists && sizeFromHeap) {
+                    
+                    // Check Near Cache size
+                    boolean nearCacheAccepted = true;
+                    if(mapConfig.getNearCacheConfig() != null){
+                        NearCacheConfig conf = mapConfig.getNearCacheConfig();
+                        nearCacheAccepted = conf.getMaxSize() < Integer.MAX_VALUE;
+                    }
+                    
+                    if (sizeDefined && policyExists && sizeFromHeap && nearCacheAccepted) {
                         configAccepted = true;
                     }
                 }

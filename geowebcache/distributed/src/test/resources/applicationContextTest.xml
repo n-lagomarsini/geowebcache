@@ -21,7 +21,10 @@
 				</hz:join>
 			</hz:network>
 			<hz:map name="CacheProviderMap" max-size="16" eviction-policy="LRU"
-				max-size-policy="USED_HEAP_SIZE" />
+				max-size-policy="USED_HEAP_SIZE" >
+				    <hz:near-cache time-to-live-seconds="0" max-idle-seconds="60"
+        eviction-policy="LRU" max-size="5000"  invalidate-on-change="true"/>
+				    </hz:map>
 		</hz:config>
 	</hz:hazelcast>
 
@@ -35,7 +38,10 @@
 				</hz:join>
 			</hz:network>
 			<hz:map name="CacheProviderMap" max-size="16" eviction-policy="LRU"
-				max-size-policy="USED_HEAP_SIZE" />
+				max-size-policy="USED_HEAP_SIZE" >
+				    <hz:near-cache time-to-live-seconds="0" max-idle-seconds="60"
+        eviction-policy="LRU" max-size="5000"  invalidate-on-change="true"/>
+				    </hz:map>
 		</hz:config>
 	</hz:hazelcast>
 

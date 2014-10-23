@@ -94,7 +94,7 @@ Currently there are two implementation of the **CacheProvider** interface:
 	
 GuavaCacheProvider
 ``````````````````````
-**GuavaCacheProvider** provides local in-memory caching by using a `Guava<https://code.google.com/p/guava-libraries/wiki/CachesExplained>`_ *Cache* object for storing the various GeoWebCache Tiles locally on the machine. For configuring a **GuavaCacheProvider**
+**GuavaCacheProvider** provides local in-memory caching by using a `Guava <https://code.google.com/p/guava-libraries/wiki/CachesExplained>`_ *Cache* object for storing the various GeoWebCache Tiles locally on the machine. For configuring a **GuavaCacheProvider**
 object the user must add a new bean in the Application Context file (like *geowebcache-core-context.xml*) and adding a reference to a configuration object storing the **CacheConfiguration** parameters.
 
 Here is an example of configuration:
@@ -160,22 +160,25 @@ Here the user can find both examples:
 						</tcp-ip>
 					</join>
 			  </network>
+			  <map name="CacheProviderMap">
 					<eviction-policy>LRU</eviction-policy>
 					<max-size policy="USED_HEAP_SIZE">16</max-size>
-				</map>
+			  </map>
 
 			</hazelcast>
 			
 		And the related application context will be:
 		
-				<bean id="HazelCastLoader1"
-					class="org.geowebcache.storage.blobstore.memory.distributed.HazelcastLoader">
-				</bean>				
-				
-				<bean id="HazelCastCacheProvider1"
-					class="org.geowebcache.storage.blobstore.memory.distributed.HazelcastCacheProvider">
-					<constructor-arg ref="HazelCastLoader1" />
-				</bean>		
+		.. code-block:: xml
+		
+			<bean id="HazelCastLoader1"
+				class="org.geowebcache.storage.blobstore.memory.distributed.HazelcastLoader">
+			</bean>				
+			
+			<bean id="HazelCastCacheProvider1"
+				class="org.geowebcache.storage.blobstore.memory.distributed.HazelcastCacheProvider">
+				<constructor-arg ref="HazelCastLoader1" />
+			</bean>		
 
 		.. note:: Remember that in this case the user must define the *hazelcast.config.dir* property when starting the application.
 	
@@ -210,4 +213,54 @@ Here the user can find both examples:
 					<constructor-arg ref="HazelCastLoader1" />
 				</bean>
 
+Optional configuration parameters
+``````````````````````````````````	
+In this section are described other possible configuration parameters to configure:
+
+	* Cache expiration time:
+	
+			.. code-block:: xml
+				
+				<map name="CacheProviderMap">
+				...
+				
+					<time-to-live-seconds>0</time-to-live-seconds>
+					<max-idle-seconds>0</max-idle-seconds>
+				
+				</map>
+		Where *time-to-live-seconds* indicates how many seconds an entry can stay in cache and *max-idle-seconds* indicates how many seconds an entry may be not accessed before being evicted.
+		
+	* Near Cache.
+	
+			.. code-block:: xml
+	
+				<map name="CacheProviderMap">
+				...
+				<near-cache>
+				  <!--
+					Same configuration parameters of the Hazelcast Map. Note that size indicates the maximum number of 
+					entries in the near cache. A value of Integer.MAX_VALUE indicates no limit on the maximum 
+					size.
+				  -->
+				  <max-size>5000</max-size>
+				  <time-to-live-seconds>0</time-to-live-seconds>
+				  <max-idle-seconds>60</max-idle-seconds>
+				  <eviction-policy>LRU</eviction-policy>
+
+				  <!--
+					Indicates if a cached entry can be evicted if the same value is modified in the Hazelcast Map. Default is true.
+				  -->
+				  <invalidate-on-change>true</invalidate-on-change>
+
+				  <!--
+					Indicates if local entries must be cached. Default is false.
+				  -->
+				  <cache-local-entries>false</cache-local-entries>
+				</near-cache>
+				
+				</map>	
+
+		Near Cache is a local cache for each cluster instance which is used for caching entries in the other cluster instances. This behaviour avoids to request those entries each time by executing a remote call. This feature could be helpful in order to improve Hazelcast Cache performances.
+		
+		.. note:: A value of *max-size* bigger or equal to Integer.MAX_VALUE cannot be used in order to avoid an uncontrollable growth of the cache size.
 
