@@ -235,8 +235,10 @@ public class HazelcastCacheProviderTest {
      */
     private void checkInputStreams(InputStream is, InputStream is2) throws IOException {
         try {
+            // Ensure the two contents are equal
             assertTrue(IOUtils.contentEquals(is, is2));
         } finally {
+            // Closing streams
             try {
                 is.close();
             } catch (IOException e) {

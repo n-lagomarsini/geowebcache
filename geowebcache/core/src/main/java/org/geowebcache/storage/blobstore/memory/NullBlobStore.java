@@ -83,7 +83,7 @@ public class NullBlobStore implements BlobStore {
 
     @Override
     public synchronized void destroy() {
-        // Clear the map
+        // Clear the properties map
         metadataMap.clear();
     }
 

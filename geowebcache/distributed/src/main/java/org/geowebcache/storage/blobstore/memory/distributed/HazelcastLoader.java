@@ -19,14 +19,25 @@ import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 
+/**
+ * This class is used for handling configuration of the Hazelcast cluster. User can directly inject an Hazelcast instance or can setup a file called
+ * hazelcast.xml and define its directory with the hazelcast.config.dir Java property. Note that the configuration must contain a map with name
+ * "CacheProviderMap" with a specific size in MB, an eviction policy equal to LRU or LFU. Also if NearCache is enabled, user must be careful that the
+ * max size is not bigger or equal to Integer.MAX_VALUE
+ * 
+ * @author Nicola Lagomarsini Geosolutions
+ */
 public class HazelcastLoader implements InitializingBean {
     /** {@link Logger} object used for logging exceptions */
     private final static Log LOGGER = LogFactory.getLog(HazelcastLoader.class);
 
+    /** Property name for the Hazelcast property file */
     public final static String HAZELCAST_CONFIG_DIR = "hazelcast.config.dir";
 
+    /** Name of the Hazelcast XML file to use */
     public final static String HAZELCAST_NAME = "hazelcast.xml";
 
+    /** Hazelcast instance to pass to the {@link HazelcastCacheProvider} class */
     private HazelcastInstance instance;
 
     @Override
@@ -59,6 +70,9 @@ public class HazelcastLoader implements InitializingBean {
                         }
                         ConfigValidator validator = new ConfigValidator(config);
                         if (validator.isAccepted()) {
+                            if (LOGGER.isDebugEnabled()) {
+                                LOGGER.debug("Hazelcast instance validated");
+                            }
                             instance = Hazelcast.newHazelcastInstance(config);
                         } else {
                             if (LOGGER.isInfoEnabled()) {
@@ -71,27 +85,57 @@ public class HazelcastLoader implements InitializingBean {
         } else if (!(new ConfigValidator(instance.getConfig()).isAccepted())) {
             instance = null;
         }
+        if (LOGGER.isDebugEnabled() && instance == null) {
+            LOGGER.debug("Hazelcast instance invalid or not found");
+        }
     }
 
+    /**
+     * Indicates if the Hazelcast instance has been configured
+     * 
+     * @return a boolean indicating if hazelcast instance can be used or not
+     */
     public boolean isConfigured() {
         return instance != null;
     }
 
+    /**
+     * Setter for the Hazelcast instance
+     * 
+     * @param instance
+     */
     public void setInstance(HazelcastInstance instance) {
         this.instance = instance;
     }
 
+    /**
+     * Returns the Hazelcast instance to use
+     * 
+     * @return Hazelcast instance if present or null
+     */
     public HazelcastInstance getInstance() {
         return isConfigured() ? instance : null;
     }
 
+    /**
+     * Validator for an input {@link Config} object provided. This class ensures that the input configuration contains a map with name
+     * "CacheProviderMap", contains a size configuration in Mb and related to the used Heap size and has an eviction policy equal to LRU or LFU. If a
+     * NearCache object is defined it cannot hava max size greater r equal to {@link Integer}.MAX_VALUE
+     * 
+     * 
+     * @author Nicola Lagomarsini Geosolutions
+     */
     static class ConfigValidator {
 
+        /** Boolean indicating the result of the validation of the {@link Config} object provided */
         private final boolean accepted;
 
         public ConfigValidator(Config config) {
             boolean configAccepted = false;
             if (config != null) {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Checking configuration");
+                }
                 // Check if the cache map is present
                 if (config.getMapConfigs().containsKey(
                         HazelcastCacheProvider.HAZELCAST_MAP_DEFINITION)) {
@@ -101,26 +145,37 @@ public class HazelcastLoader implements InitializingBean {
                     boolean sizeDefined = mapConfig.getMaxSizeConfig().getSize() > 0;
                     boolean policyExists = mapConfig.getEvictionPolicy() != MapConfig.DEFAULT_EVICTION_POLICY;
                     boolean sizeFromHeap = mapConfig.getMaxSizeConfig().getMaxSizePolicy() == MaxSizeConfig.MaxSizePolicy.USED_HEAP_SIZE;
-                    
+
                     // Check Near Cache size
                     boolean nearCacheAccepted = true;
-                    if(mapConfig.getNearCacheConfig() != null){
+                    if (mapConfig.getNearCacheConfig() != null) {
                         NearCacheConfig conf = mapConfig.getNearCacheConfig();
                         nearCacheAccepted = conf.getMaxSize() < Integer.MAX_VALUE;
                     }
-                    
+
                     if (sizeDefined && policyExists && sizeFromHeap && nearCacheAccepted) {
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Hazelcast config validated");
+                        }
                         configAccepted = true;
                     }
+                }
+            } else {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("No configuration provided");
                 }
             }
 
             accepted = configAccepted;
         }
 
+        /**
+         * Indicates if the input {@link Config} can be used for configuring Hazelcast
+         * 
+         * @return a boolean indicating if the {@link Config} file can be accepted
+         */
         public boolean isAccepted() {
             return accepted;
         }
-
     }
 }

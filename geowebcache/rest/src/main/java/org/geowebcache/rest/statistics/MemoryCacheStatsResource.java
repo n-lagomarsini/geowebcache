@@ -15,6 +15,8 @@
  */
 package org.geowebcache.rest.statistics;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.geowebcache.storage.BlobStore;
 import org.geowebcache.storage.blobstore.memory.CacheStatistics;
 import org.geowebcache.storage.blobstore.memory.MemoryBlobStore;
@@ -39,6 +41,10 @@ import com.thoughtworks.xstream.io.json.JsonHierarchicalStreamDriver;
  */
 public class MemoryCacheStatsResource extends Resource {
 
+    /** {@link Log} used for logging operations */
+    public static Log LOG = LogFactory.getLog(MemoryCacheStatsResource.class);
+
+    /** BlobStore used for getting statistics */
     private BlobStore store;
 
     /**
@@ -79,7 +85,9 @@ public class MemoryCacheStatsResource extends Resource {
         // Getting the store statistics if it is a MemoryCacheBlobStore
         Representation representation;
         if (store != null && store instanceof MemoryBlobStore) {
-
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Memory Blobstore found, now getting statistics");
+            }
             // Getting statistics
             MemoryBlobStore memoryStore = (MemoryBlobStore) store;
             CacheStatistics stats = memoryStore.getCacheStatistics();
@@ -87,13 +95,22 @@ public class MemoryCacheStatsResource extends Resource {
             // create a new Representation object
             if ("json".equals(formatExtension)) {
                 try {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Statistics requested in JSON format");
+                    }
                     representation = getJsonRepresentation(statistics);
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
                 }
             } else if ("xml".equals(formatExtension)) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Statistics requested in XML format");
+                }
                 representation = getXmlRepresentation(statistics);
             } else {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Statistics requested in a bad format");
+                }
                 response.setStatus(Status.CLIENT_ERROR_BAD_REQUEST,
                         "Unknown or missing format extension : " + formatExtension);
                 return;
@@ -142,7 +159,6 @@ public class MemoryCacheStatsResource extends Resource {
      */
     public static XStream getConfiguredXStream(XStream xs) {
         xs.setMode(XStream.NO_REFERENCES);
-
         xs.alias("gwcInMemoryCacheStatistics", CacheStatistics.class);
         return xs;
     }

@@ -625,6 +625,9 @@ public class GeoWebCacheDispatcher extends AbstractController {
         // Searches for the BlobStore inside the StorageBroker
         BlobStore privateStore = null;
         try {
+            if (log.isDebugEnabled()) {
+                log.debug("Searching for the blobstore used");
+            }
             Field privateblobStore = storageBroker.getClass().getDeclaredField("blobStore");
 
             privateblobStore.setAccessible(true);
@@ -650,15 +653,25 @@ public class GeoWebCacheDispatcher extends AbstractController {
 
         // If it is not present, or it is not a memory blobstore, nothing is done
         if (privateStore == null || !(privateStore instanceof MemoryBlobStore)) {
+            if (log.isDebugEnabled()) {
+                log.debug("No Memory BlobStore found");
+            }
             return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Memory BlobStore found");
         }
 
         // Get the MemoryBlobStore if present
         MemoryBlobStore store = (MemoryBlobStore) privateStore;
 
+        if (log.isDebugEnabled()) {
+            log.debug("Getting statistics");
+        }
         // Get the statistics
         CacheStatistics statistics = store.getCacheStatistics();
 
+        // No Statistics found
         if (statistics == null) {
             return;
         }

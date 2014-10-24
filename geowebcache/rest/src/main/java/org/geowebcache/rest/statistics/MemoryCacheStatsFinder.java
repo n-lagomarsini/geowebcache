@@ -52,6 +52,9 @@ public class MemoryCacheStatsFinder extends Finder {
         // Check if the StorageBroker contains a MemoryBlobStore
         BlobStore privateStore = null;
         try {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Getting BlobStore from the storage broker");
+            }
             Field privateblobStore = broker.getClass().getDeclaredField("blobStore");
 
             privateblobStore.setAccessible(true);
