@@ -113,6 +113,16 @@ public abstract class TileLayer {
     public abstract void setEnabled(boolean enabled);
 
     /**
+     * @return {@code true} if the layer is advertised, {@code false} otherwise
+     */
+    public abstract boolean isAdvertised();
+
+    /**
+     * @param advertised whether to set this layer as advertised
+     */
+    public abstract void setAdvertised(boolean advertised);
+
+    /**
      * Layer meta information
      * 
      * @return

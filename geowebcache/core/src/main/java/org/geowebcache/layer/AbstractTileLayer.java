@@ -54,6 +54,8 @@ public abstract class AbstractTileLayer extends TileLayer {
     private static final int[] DEFAULT_METATILING_FACTORS = { 1, 1 };
 
     protected Boolean enabled;
+    
+    protected Boolean advertised;
 
     protected String name;
 
@@ -169,6 +171,16 @@ public abstract class AbstractTileLayer extends TileLayer {
     @Override
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    @Override
+    public boolean isAdvertised(){
+        return advertised == null ? true : advertised.booleanValue();
+    }
+
+    @Override
+    public void setAdvertised(boolean advertised){
+        this.advertised = advertised;
     }
 
     /**
