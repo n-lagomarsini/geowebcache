@@ -121,6 +121,16 @@ public abstract class TileLayer {
      * @param advertised whether to set this layer as advertised
      */
     public abstract void setAdvertised(boolean advertised);
+    
+    /**
+     * @return {@code true} if the layer is transient, {@code false} otherwise
+     */
+    public abstract boolean isTransientLayer();
+
+    /**
+     * @param transientLayer whether to set this layer as transient
+     */
+    public abstract void setTransientLayer(boolean transientLayer);
 
     /**
      * Layer meta information

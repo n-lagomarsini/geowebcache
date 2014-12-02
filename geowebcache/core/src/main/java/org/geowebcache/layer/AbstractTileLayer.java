@@ -56,6 +56,8 @@ public abstract class AbstractTileLayer extends TileLayer {
     protected Boolean enabled;
     
     protected Boolean advertised;
+    
+    protected Boolean transientLayer;
 
     protected String name;
 
@@ -181,6 +183,16 @@ public abstract class AbstractTileLayer extends TileLayer {
     @Override
     public void setAdvertised(boolean advertised){
         this.advertised = advertised;
+    }
+
+    @Override
+    public boolean isTransientLayer(){
+        return transientLayer == null ? false : transientLayer.booleanValue();
+    }
+
+    @Override
+    public void setTransientLayer(boolean transientLayer){
+        this.transientLayer = transientLayer;
     }
 
     /**
